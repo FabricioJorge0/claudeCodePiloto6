@@ -309,3 +309,52 @@ Registrar, de forma contínua e auditável, o processo de desenvolvimento assist
 - Autorizou o commit e o push da Etapa 3.
 - Autorizou a Etapa 4, incluindo a instalação do `@playwright/test` e do navegador Chromium.
 - Commit da Etapa 4 **ainda não autorizado**.
+
+---
+
+## Iteração 8 — 2026-10-14 — Commit da Etapa 4 e Etapa 5: CI com GitHub Actions
+
+### Prompt do humano
+
+> sim pode fazer o commit, pushe e ir para etapa 5
+
+### O que o assistente executou
+
+**Controle de versão**
+- Commit `70bf772`: `test: testes de ponta a ponta com Playwright (desktop e mobile)`, seguido de push para `origin/main` (`8661805..70bf772`).
+- Verificou se o GitHub CLI (`gh`) estava disponível: **não está instalado**. A situação da CI será consultada pela API pública do GitHub, apenas em modo de leitura.
+
+**Etapa 5: integração contínua**
+- `.github/workflows/ci.yml`, disparado a cada push e pull request na `main` (e manualmente):
+  - job **unidade**, em matriz com Node 22 e 24: `npm ci`, `npm audit --audit-level=high` e `npm test`;
+  - job **e2e**, que roda depois de **unidade**: `npm ci`, `npx playwright install --with-deps chromium` e `npx playwright test`; se falhar, o relatório é publicado como artefato por 7 dias.
+- Medidas de segurança do workflow:
+  - `permissions: contents: read` (menor privilégio);
+  - `persist-credentials: false` no checkout;
+  - `npm ci` (instalação exata pelo lockfile);
+  - `timeout-minutes` em cada job;
+  - `concurrency` para cancelar execuções antigas.
+- **Decisão técnica:** o Node 20 ficou fora da matriz e o requisito mínimo passou para Node 22 (`engines` no `package.json` e no README). O Node 20 chegou ao fim do suporte em abril de 2026, e o script `npm test` usa padrão glob no `node --test`, recurso que só existe a partir do Node 21.
+- `package-lock.json` sincronizado (`npm install --package-lock-only`); `npm audit`: 0 vulnerabilidades.
+- `README.md`: seção "Integração contínua" e situação das etapas atualizadas.
+- **Observação:** as actions estão referenciadas por tag de versão (`@v4`). Fixar cada uma por hash de commit (SHA) aumentaria a proteção contra ataques à cadeia de suprimentos; fica como melhoria futura.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `.github/workflows/ci.yml` | Criado |
+| `package.json` | Modificado (`engines` >= 22) |
+| `package-lock.json` | Modificado (sincronizado) |
+| `README.md` | Modificado |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (registro da iteração 8) |
+
+### Testes e dependências
+
+- `npm audit --audit-level=high` local: 0 vulnerabilidades.
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push da Etapa 4.
+- Autorizou a Etapa 5. O plano apresentado já incluía o push do workflow e a conferência da execução no GitHub.

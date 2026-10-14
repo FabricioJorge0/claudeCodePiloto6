@@ -19,7 +19,16 @@ Sistema web responsivo para acompanhar projetos ambientais (status, responsável
 | 2 | Estrutura básica (servidor Node + página responsiva) | Concluída |
 | 3 | Testes Node + persistência em localStorage | Concluída |
 | 4 | Testes Playwright (desktop + celular) | Concluída |
-| 5 | CI com GitHub Actions | Pendente |
+| 5 | CI com GitHub Actions | Concluída |
+
+## Integração contínua
+
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda a cada push e pull request na `main`:
+
+1. **unidade** (Node 22 e 24): `npm ci`, `npm audit --audit-level=high` e `npm test`
+2. **e2e** (roda depois da anterior): instala o Chromium e roda o Playwright em desktop e celular; se falhar, publica o relatório como artefato
+
+Segurança do workflow: permissão apenas de leitura (`contents: read`), checkout sem credenciais persistidas e instalação exata pelo lockfile.
 
 ## Arquitetura
 
@@ -29,7 +38,7 @@ Funcionalidades: resumo por status, filtro, cadastro de projeto com validação,
 
 ## Como executar
 
-Requisito: Node.js 20 ou superior.
+Requisito: Node.js 22 ou superior.
 
 ```bash
 npm install                          # instala o Playwright (apenas desenvolvimento)
