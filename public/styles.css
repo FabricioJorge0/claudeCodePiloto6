@@ -1,29 +1,20 @@
+/* Paleta: branco predominante, verde como cor de apoio.
+   Texto sempre preto (ou branco sobre verde). Exceções: selos de status
+   (cor de cada status), botões Excluir (avermelhado) e Salvar projeto (verde). */
 :root {
-  --fundo: #f4f7f4;
-  --superficie: #ffffff;
-  --texto: #1d2b22;
-  --texto-suave: #55665b;
-  --primaria: #2e7d4f;
-  --borda: #d6e0d8;
-  --planejamento: #3b6ea5;
-  --em-execucao: #2e7d4f;
-  --atrasado: #b23b3b;
-  --concluido: #6b5aa5;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fundo: #121a15;
-    --superficie: #1b261f;
-    --texto: #e3ece5;
-    --texto-suave: #a3b5a8;
-    --primaria: #6cc391;
-    --borda: #2c3b31;
-    --planejamento: #7fa9d9;
-    --em-execucao: #6cc391;
-    --atrasado: #e48585;
-    --concluido: #b1a3e0;
-  }
+  color-scheme: light;
+  --branco: #ffffff;
+  --preto: #000000;
+  --verde: #2e7d32;
+  --verde-escuro: #1b5e20;
+  --verde-claro: #e8f5e9;
+  --borda: #c8e6c9;
+  --vermelho: #c62828;
+  --vermelho-claro: #ffebee;
+  --planejamento: #1565c0;
+  --em-execucao: #2e7d32;
+  --atrasado: #c62828;
+  --concluido: #6a1b9a;
 }
 
 * { box-sizing: border-box; }
@@ -31,20 +22,25 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--fundo);
-  color: var(--texto);
+  background: var(--branco);
+  color: var(--preto);
   line-height: 1.5;
 }
 
-.topo, main, .rodape {
+main, .rodape {
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 16px;
 }
 
-.topo { padding-top: 24px; }
-.topo h1 { margin: 0 0 4px; font-size: clamp(1.4rem, 4vw, 2rem); color: var(--primaria); }
-.aviso { margin: 0; color: var(--texto-suave); font-size: .9rem; }
+/* Faixa verde no topo (largura total), conteúdo alinhado ao restante */
+.topo {
+  background: var(--verde);
+  color: var(--branco);
+  padding: 20px max(16px, calc((100% - 1100px) / 2 + 16px));
+}
+.topo h1 { margin: 0 0 4px; font-size: clamp(1.4rem, 4vw, 2rem); }
+.aviso { margin: 0; font-size: .9rem; }
 
 h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 
@@ -55,8 +51,9 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 }
 
 .cartao-resumo {
-  background: var(--superficie);
+  background: var(--branco);
   border: 1px solid var(--borda);
+  border-top: 4px solid var(--verde);
   border-radius: 8px;
   padding: 12px 16px;
   min-width: 0;
@@ -69,7 +66,9 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   display: block;
   overflow-wrap: anywhere;
 }
-.cartao-resumo .rotulo { color: var(--texto-suave); font-size: .85rem; }
+/* Valor em moeda é mais longo: fonte menor para caber em uma linha no cartão */
+.cartao-resumo .valor-moeda { font-size: 1.1rem; line-height: 1.9; }
+.cartao-resumo .rotulo { font-size: .85rem; }
 
 .barra {
   display: flex;
@@ -82,13 +81,13 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 .filtro select {
   padding: 6px 8px;
   border-radius: 6px;
-  border: 1px solid var(--borda);
-  background: var(--superficie);
-  color: var(--texto);
+  border: 1px solid var(--verde);
+  background: var(--branco);
+  color: var(--preto);
   font: inherit;
 }
 
-.mensagem { color: var(--texto-suave); min-height: 1.5em; margin: 4px 0; }
+.mensagem { min-height: 1.5em; margin: 4px 0; }
 
 .lista {
   list-style: none;
@@ -100,8 +99,9 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 }
 
 .projeto {
-  background: var(--superficie);
+  background: var(--branco);
   border: 1px solid var(--borda);
+  border-left: 4px solid var(--verde);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -112,9 +112,10 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 }
 .projeto h3 { margin: 0; font-size: 1rem; }
 .projeto dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .9rem; }
-.projeto dt { color: var(--texto-suave); }
+.projeto dt { font-weight: 600; }
 .projeto dd { margin: 0; }
 
+/* Exceção: o texto do selo usa a cor do status */
 .selo {
   align-self: flex-start;
   font-size: .75rem;
@@ -122,6 +123,7 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid currentColor;
+  background: var(--branco);
 }
 .selo-planejamento { color: var(--planejamento); }
 .selo-em_execucao { color: var(--em-execucao); }
@@ -130,26 +132,26 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 
 .progresso {
   height: 8px;
-  background: var(--borda);
+  background: var(--verde-claro);
+  border: 1px solid var(--borda);
   border-radius: 999px;
   overflow: hidden;
 }
-.progresso span { display: block; height: 100%; background: var(--primaria); }
+.progresso span { display: block; height: 100%; background: var(--verde); }
 
-.rodape { color: var(--texto-suave); font-size: .85rem; padding-bottom: 24px; }
+.rodape { font-size: .85rem; padding-bottom: 24px; border-top: 1px solid var(--borda); padding-top: 12px; }
 
 .acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 .painel {
-  background: var(--superficie);
+  background: var(--verde-claro);
   border: 1px solid var(--borda);
   border-radius: 8px;
   padding: 0 16px;
   margin-top: 24px;
 }
-.painel summary { cursor: pointer; }
+.painel summary { cursor: pointer; padding: 12px 0; }
 .painel summary h2 { display: inline; margin: 0; }
-.painel summary { padding: 12px 0; }
 
 .formulario {
   display: grid;
@@ -161,42 +163,75 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 .formulario input, .formulario select {
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid var(--borda);
-  background: var(--fundo);
-  color: var(--texto);
+  border: 1px solid var(--verde);
+  background: var(--branco);
+  color: var(--preto);
   font: inherit;
 }
-.formulario .erros, .formulario .botao { grid-column: 1 / -1; }
+.formulario input:focus-visible, .formulario select:focus-visible, .filtro select:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 1px;
+}
+.formulario .erros, .formulario .botao-salvar { grid-column: 1 / -1; }
 
-.erros { margin: 0; padding-left: 20px; color: var(--atrasado); font-size: .9rem; }
+/* Erros: texto preto, destacados por fundo e borda avermelhados */
+.erros {
+  margin: 0;
+  padding: 8px 12px 8px 28px;
+  font-size: .9rem;
+  background: var(--vermelho-claro);
+  border-left: 4px solid var(--vermelho);
+  border-radius: 6px;
+}
 .erros:empty { display: none; }
 
-.botao, .botao-secundario {
+/* Botões */
+.botao-salvar, .botao-secundario, .botao-excluir, .botao-primario {
   font: inherit;
   border-radius: 6px;
   padding: 8px 14px;
   cursor: pointer;
+  background: var(--branco);
+  align-self: flex-start;
 }
-.botao { background: var(--primaria); color: var(--superficie); border: 1px solid var(--primaria); justify-self: start; }
-.botao-secundario { background: transparent; color: var(--texto); border: 1px solid var(--borda); align-self: flex-start; }
-.botao:focus-visible, .botao-secundario:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+.botao-salvar, .botao-secundario, .botao-excluir, .botao-primario { justify-self: start; }
+.botao-salvar:focus-visible, .botao-secundario:focus-visible,
+.botao-excluir:focus-visible, .botao-primario:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 2px;
+}
 
-.botao-perigo { background: var(--atrasado); border-color: var(--atrasado); }
+/* Exceção: "Salvar projeto" com texto verde */
+.botao-salvar { color: var(--verde); border: 2px solid var(--verde); font-weight: 700; }
+.botao-salvar:hover { background: var(--verde-claro); }
 
+.botao-secundario { color: var(--preto); border: 1px solid var(--verde); }
+.botao-secundario:hover { background: var(--verde-claro); }
+
+/* Exceção: "Excluir" com texto avermelhado */
+.botao-excluir { color: var(--vermelho); border: 1px solid var(--vermelho); font-weight: 600; }
+.botao-excluir:hover { background: var(--vermelho-claro); }
+.botao-excluir:focus-visible { outline-color: var(--vermelho); }
+
+.botao-primario { color: var(--branco); background: var(--verde); border: 1px solid var(--verde); font-weight: 600; }
+.botao-primario:hover { background: var(--verde-escuro); }
+
+/* Modal de confirmação */
 .modal {
   width: min(440px, calc(100% - 32px));
-  padding: 20px;
+  padding: 0;
   border: 1px solid var(--borda);
   border-radius: 10px;
-  background: var(--superficie);
-  color: var(--texto);
+  background: var(--branco);
+  color: var(--preto);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+  overflow: hidden;
 }
 .modal::backdrop { background: rgba(0, 0, 0, .5); }
-.modal h2 { margin: 0 0 8px; font-size: 1.1rem; }
-.modal p { margin: 0 0 20px; overflow-wrap: anywhere; }
-.modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.modal-acoes button { align-self: auto; justify-self: auto; }
+.modal h2 { margin: 0; padding: 12px 20px; font-size: 1.1rem; background: var(--verde); color: var(--branco); }
+.modal p { margin: 0; padding: 16px 20px 20px; overflow-wrap: anywhere; }
+.modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
+.modal-acoes button { align-self: auto; }
 
 @media (max-width: 480px) {
   .lista { grid-template-columns: 1fr; }

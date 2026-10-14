@@ -855,3 +855,126 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `0549c1d`, com push para `origin/main` (`0e85103..0549c1d`).
+
+---
+
+## Iteração 24 — 2026-10-14 — Versão antiga aberta pelo painel da Vercel
+
+### Prompt do humano
+
+> quando eu acesso pelo link que voce me mandou, as alterações aparecem, mas quando eu acesso, de qualquer forma pela vercel, ainda aparece o modal em alert
+
+### O que o assistente executou
+
+- Nenhuma alteração no código e nenhum comando executado. A situação do domínio de produção já tinha sido verificada na iteração 23 (modal publicado).
+- Análise: o humano confirma que **`https://claude-code-piloto6.vercel.app` está correto**. O problema aparece só nos links abertos pelo painel da Vercel. Hipóteses, da mais para a menos provável:
+  1. o painel abre a **URL fixa de um deploy antigo** (cartão ou miniatura de um deploy específico), que nunca é atualizada;
+  2. o deploy marcado como **"Production"/"Current" no painel não é o mais recente**, por exemplo depois de um *Instant Rollback*, que desliga a atualização automática do domínio, ou por uma Production Branch diferente de `main`;
+  3. existe **um segundo projeto** na Vercel apontando para o mesmo repositório.
+- Pedido ao humano: informar a URL exibida na barra de endereço e o commit do deploy que o painel abre, para confirmar a causa antes de qualquer ação.
+
+### Aprovações do humano
+
+- Nenhuma alteração autorizada; o diagnóstico aguarda as informações do humano.
+- Este registro ainda não foi commitado.
+
+---
+
+## Iteração 25 — 2026-10-14 — Causa confirmada: deploy antigo como "Current" na Vercel
+
+### Prompt do humano
+
+> o current era um deploy antigo, fiz o promote e funcionou
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: a **hipótese 2 da iteração 24 estava correta**. O deploy marcado como "Current" no painel da Vercel era antigo. O humano fez **Promote to Production** do deploy mais recente e o problema foi resolvido.
+- Nenhuma alteração de código; o problema era de configuração do deploy na Vercel.
+- Observação: o assistente tentou registrar esta iteração no momento, mas o humano **interrompeu a edição** para enviar o pedido da iteração 26. O registro foi feito junto com a iteração seguinte.
+
+### Aprovações do humano
+
+- O humano fez o *promote* no painel da Vercel e confirmou o resultado.
+
+---
+
+## Iteração 26 — 2026-10-14 — Nova paleta: branco e verde, texto preto/branco
+
+### Prompt do humano
+
+> Eu quero que voce deixe todo o site no tom branco (mais predominante) e verde (um pouco menos predominante) as letras todas devem ser pretas ou brancas (se necessário), exceto na parte dos status que deve as letras devem ser da cor de cada status e os botões de excluir, onde as letras devem ter um tom avermelhado e salvar projeto na cor verde.
+
+### O que o assistente executou
+
+**`public/styles.css` (reescrito)**
+- Fundo **branco** (`#ffffff`) em toda a página. O **tema escuro automático foi removido** (`color-scheme: light`), porque escurecia o site.
+- **Verde** (`#2e7d32`) como cor de apoio:
+  - faixa do topo em largura total;
+  - borda superior dos cartões do resumo e borda lateral dos cartões de projeto;
+  - barras de progresso;
+  - painel "Novo projeto" em verde-claro;
+  - bordas dos campos e foco;
+  - cabeçalho do modal.
+- **Texto preto** (`#000000`) em todo o conteúdo e **branco** sobre fundos verdes (topo, cabeçalho do modal, botão primário). Os textos cinza e verdes anteriores foram eliminados.
+- **Exceções pedidas:**
+  - selos de status com texto na cor de cada status: azul (planejamento), verde (em execução), vermelho (atrasado), roxo (concluído);
+  - botões **Excluir** (cartão e modal) com texto **avermelhado** (`#c62828`);
+  - **Salvar projeto** com texto **verde**.
+- Erros do formulário: texto preto, destacado por fundo e borda avermelhados, para seguir a regra de texto preto.
+- Ajuste visual: o valor "R$ 830.000,00" quebrava em duas linhas no desktop; a fonte desse cartão foi reduzida (`.valor-moeda`).
+
+**Outros arquivos**
+- `public/index.html`: classes `botao-salvar` e `botao-primario`.
+- `public/js/app.js`:
+  - botão Excluir com a classe `botao-excluir`;
+  - `confirmar()` ganhou a opção `excluir`: o modal de exclusão usa texto avermelhado e o de restauração usa o botão verde;
+  - o cartão de moeda usa a classe `valor-moeda`.
+- `e2e/app.spec.js`: novo teste **"paleta"**, que verifica:
+  - fundo branco, texto preto e topo verde;
+  - as cores exatas das exceções (Salvar, Excluir, selos e Excluir do modal);
+  - que **todo elemento com texto visível** fora das exceções tem cor preta ou branca.
+  - A primeira execução falhou porque o teste procurava "Salvar projeto" com o painel recolhido; o teste foi corrigido para abrir o painel antes.
+- `README.md`: seção sobre a paleta.
+
+**Verificação visual**
+- Capturas de tela (desktop, mobile e modal) geradas por um script temporário **fora do repositório** e revisadas pelo assistente.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `public/styles.css` | Reescrito (nova paleta) |
+| `public/index.html` | Modificado (classes dos botões) |
+| `public/js/app.js` | Modificado (classes, variante do modal, `valor-moeda`) |
+| `e2e/app.spec.js` | Modificado (teste de paleta) |
+| `README.md` | Modificado |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 25 e 26) |
+
+### Testes e dependências
+
+- `npm test`: **72/72 aprovados**.
+- `npx playwright test` (local): **24/24 aprovados** (12 cenários × desktop e mobile).
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Pediu a nova paleta (autorização implícita para alterar os arquivos visuais).
+- Commit e push **ainda não autorizados**. A Vercel só será atualizada depois do push.
+
+---
+
+## Iteração 27 — 2026-10-14 — Commit e push da nova paleta
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `style: paleta branco e verde com texto preto/branco`, com push para `origin/main`. Inclui as alterações da iteração 26 e este relatório (iterações 24 a 27).
+- O push dispara a CI e um novo deploy na Vercel. Cabe ao humano conferir a CI e se o novo deploy ficou como **Current** na Vercel.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.

@@ -31,13 +31,15 @@ function el(tag, props = {}, filhos = []) {
 
 // Confirmação em modal (<dialog>) no lugar de window.confirm.
 // Resolve true só ao clicar em "Confirmar"; Cancelar, Esc ou clique fora resolvem false.
-function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar' }) {
+// excluir: true deixa o botão de confirmação com o estilo de exclusão (texto avermelhado).
+function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar', excluir = false }) {
   const modal = document.getElementById('modal-confirmacao');
   const botaoConfirmar = document.getElementById('modal-confirmar');
   const botaoCancelar = document.getElementById('modal-cancelar');
   document.getElementById('modal-titulo').textContent = titulo;
   document.getElementById('modal-mensagem').textContent = mensagem;
   botaoConfirmar.textContent = textoConfirmar;
+  botaoConfirmar.className = excluir ? 'botao-excluir' : 'botao-primario';
 
   return new Promise((resolver) => {
     const fechar = (resultado) => () => modal.close(resultado);
@@ -74,12 +76,12 @@ function renderizarResumo(projetos) {
   const cartoes = [
     ['Total', resumo.total],
     ...Object.entries(resumo.porStatus).map(([s, n]) => [ROTULOS_STATUS[s] ?? s, n]),
-    ['Orçamento total', moeda.format(resumo.orcamentoTotal)]
+    ['Orçamento total', moeda.format(resumo.orcamentoTotal), 'valor valor-moeda']
   ];
   document.getElementById('resumo').replaceChildren(
-    ...cartoes.map(([rotulo, valor]) =>
+    ...cartoes.map(([rotulo, valor, classe = 'valor']) =>
       el('div', { className: 'cartao-resumo' }, [
-        el('span', { className: 'valor', textContent: String(valor) }),
+        el('span', { className: classe, textContent: String(valor) }),
         el('span', { className: 'rotulo', textContent: rotulo })
       ])
     )
@@ -104,13 +106,14 @@ function renderizarProjeto(p) {
     ['Progresso', `${progresso}%`]
   ];
 
-  const excluir = el('button', { type: 'button', className: 'botao-secundario', textContent: 'Excluir' });
+  const excluir = el('button', { type: 'button', className: 'botao-excluir', textContent: 'Excluir' });
   excluir.setAttribute('aria-label', `Excluir ${p.nome}`);
   excluir.addEventListener('click', async () => {
     const confirmado = await confirmar({
       titulo: 'Excluir projeto',
       mensagem: `Excluir o projeto "${p.nome}"? Esta ação não pode ser desfeita.`,
-      textoConfirmar: 'Excluir'
+      textoConfirmar: 'Excluir',
+      excluir: true
     });
     if (confirmado) {
       repositorio.remover(p.id);

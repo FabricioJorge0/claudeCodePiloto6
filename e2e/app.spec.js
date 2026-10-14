@@ -186,6 +186,52 @@ test('clicar dentro da caixa do modal não cancela', async ({ page }) => {
   await modal(page).getByRole('button', { name: 'Cancelar' }).click();
 });
 
+test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções', async ({ page }) => {
+  const BRANCO = 'rgb(255, 255, 255)';
+  const PRETO = 'rgb(0, 0, 0)';
+  const VERDE = 'rgb(46, 125, 50)';
+  const VERMELHO = 'rgb(198, 40, 40)';
+
+  await expect(page.locator('body')).toHaveCSS('background-color', BRANCO);
+  await expect(page.locator('body')).toHaveCSS('color', PRETO);
+  await expect(page.locator('header.topo')).toHaveCSS('background-color', VERDE);
+
+  // Exceções permitidas ("Salvar projeto" fica no painel recolhido)
+  await page.getByText('Novo projeto').click();
+  await expect(page.getByRole('button', { name: 'Salvar projeto' })).toHaveCSS('color', VERDE);
+  await expect(page.getByRole('button', { name: /^Excluir / }).first()).toHaveCSS('color', VERMELHO);
+  const coresStatus = {
+    planejamento: 'rgb(21, 101, 192)',
+    em_execucao: VERDE,
+    atrasado: VERMELHO,
+    concluido: 'rgb(106, 27, 154)'
+  };
+  for (const [status, cor] of Object.entries(coresStatus)) {
+    await expect(page.locator(`.selo-${status}`).first()).toHaveCSS('color', cor);
+  }
+
+  // Modal de exclusão: botão de confirmar com texto avermelhado
+  await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
+  await expect(modal(page).getByRole('button', { name: 'Excluir' })).toHaveCSS('color', VERMELHO);
+  await modal(page).getByRole('button', { name: 'Cancelar' }).click();
+
+  // Todo o restante do texto visível deve ser preto ou branco
+  const foraDaRegra = await page.evaluate(({ permitidas, excecoes }) => {
+    const problemas = [];
+    for (const elemento of document.querySelectorAll('body *')) {
+      if (elemento.closest(excecoes)) continue;
+      const temTexto = [...elemento.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+      if (!temTexto) continue;
+      const cor = getComputedStyle(elemento).color;
+      if (!permitidas.includes(cor)) {
+        problemas.push(`<${elemento.tagName.toLowerCase()} class="${elemento.className}"> ${cor}`);
+      }
+    }
+    return problemas;
+  }, { permitidas: [PRETO, BRANCO], excecoes: '.selo, .botao-excluir, .botao-salvar' });
+  expect(foraDaRegra).toEqual([]);
+});
+
 test('descarta dados adulterados no localStorage', async ({ page }) => {
   await page.evaluate(() => {
     const dados = JSON.parse(localStorage.getItem('gpa:projetos:v1'));
