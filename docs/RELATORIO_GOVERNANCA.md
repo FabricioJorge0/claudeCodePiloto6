@@ -590,3 +590,70 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `c27abf8`, com push para `origin/main` (`ba73600..c27abf8`).
+
+---
+
+## Iteração 15 — 2026-10-14 — Pacote de evidências E2E
+
+### Prompt do humano
+
+> a CI passou, pode gerar o zip das evidências
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `c27abf8` passou**.
+- Verificou as evidências antes de empacotar:
+  - há 18 `trace.zip` em `test-results/`;
+  - o relatório HTML é de 14/10/2026 09:41, da execução contra a Vercel; a execução local de verificação usou pasta separada e não sobrescreveu nada;
+  - um dos traces foi aberto e **contém requisições para `claude-code-piloto6.vercel.app`**, o que confirma que a evidência é do ambiente publicado.
+- Criou o `LEIAME.txt` com data, URL testada, commit, comando, versão do Playwright, resultado (18/18), lista de cenários e instruções para abrir o relatório e os traces.
+- Gerou **`evidencias-e2e-vercel-2026-10-14.zip`** (8,45 MB, 57 arquivos) na raiz do projeto, com `playwright-report/`, `test-results/` (18 traces) e `LEIAME.txt`. O conteúdo foi conferido depois de gerado.
+- O zip **não foi versionado**: está como arquivo não rastreado no Git, e nenhum commit foi feito nesta iteração.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `evidencias-e2e-vercel-2026-10-14.zip` | Criado (não versionado) |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iteração 15) |
+
+### Testes e dependências
+
+- Nenhum teste executado; as evidências são da execução registrada na iteração 13.
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+- Autorizou gerar o zip das evidências.
+- Commit deste registro **ainda não autorizado**.
+
+---
+
+## Iteração 16 — 2026-10-14 — `.gitignore` das evidências e commit
+
+### Prompt do humano
+
+> sim, adicione ao .gitignore e faça o commit e push
+
+### O que o assistente executou
+
+- `.gitignore`: novo padrão `evidencias-*.zip`. Os pacotes de evidências gerados localmente não entram no repositório.
+- Commit `chore: ignora pacotes de evidências e registra geração do zip E2E`, com push para `origin/main`. Inclui `.gitignore` e este relatório (iterações 15 e 16).
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `.gitignore` | Modificado |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 15 e 16) |
+
+### Testes e dependências
+
+- Nenhum teste executado (não houve alteração de código).
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Autorizou a alteração do `.gitignore`, o commit e o push.

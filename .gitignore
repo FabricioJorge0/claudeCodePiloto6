@@ -7,6 +7,9 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
+# Pacotes de evidências gerados localmente (entregues fora do repositório)
+evidencias-*.zip
+
 # Variáveis de ambiente e segredos
 .env
 .env.*
