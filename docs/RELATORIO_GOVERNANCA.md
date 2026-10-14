@@ -804,3 +804,54 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `0e85103`, com push para `origin/main` (`d3b1578..0e85103`).
+
+---
+
+## Iteração 22 — 2026-10-14 — CI aprovada no último commit
+
+### Prompt do humano
+
+> a CI passou
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `0e85103` passou**.
+- Nenhuma alteração de código, nenhum teste executado e nenhum commit feito. Este registro fica pendente de commit até a próxima autorização.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+
+---
+
+## Iteração 23 — 2026-10-14 — Relato de "Vercel sem o modal" e commit do relatório
+
+### Prompt do humano
+
+> sim, faça o commit e push. Queria tambem informar que no vercel ainda nao esta refletindo as mudanças e adicionar o modal, ainda esta solicitando confirmação pelo alert
+
+### O que o assistente executou
+
+**Diagnóstico (somente leitura, sem alterar o projeto)**
+- Domínio de produção `https://claude-code-piloto6.vercel.app`:
+  - o `index.html` publicado **contém o modal** (`modal-confirmacao`);
+  - o `js/app.js` publicado tem **0 ocorrências de `window.confirm(`** e contém `function confirmar`;
+  - cabeçalhos: `Cache-Control: public, max-age=0, must-revalidate`, ou seja, o navegador revalida a cada acesso.
+- A URL informada antes pelo humano, `claude-code-piloto6-lx9ut0ec6-fabriciojorge0s-projects.vercel.app`, é uma **URL de deploy específico**. Na Vercel, cada URL desse tipo é uma **cópia fixa** de um deploy: ela nunca recebe atualizações e continua mostrando a versão daquele momento, anterior ao modal. Ela também exige login na Vercel (HTTP 302 para o SSO).
+- Conclusão: **a produção já está com o modal**. A causa provável do relato é o acesso pela URL fixa do deploy antigo (ou, menos provável, cache do navegador). Nenhuma alteração no código é necessária.
+- Orientação dada ao humano:
+  - usar `https://claude-code-piloto6.vercel.app`;
+  - em Vercel → Deployments, abrir o deploy mais recente (commit `0e85103`);
+  - se ainda assim aparecer a janela antiga, recarregar sem cache (Ctrl+Shift+R) ou usar uma aba anônima.
+
+**Controle de versão**
+- Commit `docs: registra CI aprovada e diagnóstico do deploy na Vercel`, com push para `origin/main`. Inclui somente este relatório (iterações 22 e 23).
+
+### Testes e dependências
+
+- Nenhum teste executado (apenas verificação HTTP do ambiente publicado).
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.
