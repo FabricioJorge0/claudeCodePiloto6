@@ -34,13 +34,25 @@ const projetoNovo = {
   progresso: '20'
 };
 
+function modal(page) {
+  return page.getByRole('dialog');
+}
+
 let errosNoConsole;
+let dialogosNativos;
 
 test.beforeEach(async ({ page }) => {
   errosNoConsole = [];
+  dialogosNativos = [];
   page.on('pageerror', (erro) => errosNoConsole.push(erro.message));
   page.on('console', (msg) => {
     if (msg.type() === 'error') errosNoConsole.push(msg.text());
+  });
+  // Regra do sistema: nenhuma janela nativa (alert, confirm, prompt).
+  // Se alguma aparecer, é registrada e o teste falha no afterEach.
+  page.on('dialog', async (dialogo) => {
+    dialogosNativos.push(`${dialogo.type()}: ${dialogo.message()}`);
+    await dialogo.dismiss();
   });
   await page.goto('/');
 });
@@ -48,6 +60,7 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(() => {
   // Também detecta violações de CSP, que aparecem como erro no console
   expect(errosNoConsole).toEqual([]);
+  expect(dialogosNativos, 'janelas nativas (alert/confirm/prompt) não são permitidas').toEqual([]);
 });
 
 test('carrega a página com aviso de dados fictícios e resumo', async ({ page }) => {
@@ -105,12 +118,7 @@ test('mostra erros de validação e não salva projeto inválido', async ({ page
 });
 
 test('exibe HTML digitado como texto, sem executá-lo (XSS)', async ({ page }) => {
-  let alertaDisparado = false;
-  page.on('dialog', async (dialogo) => {
-    alertaDisparado = true;
-    await dialogo.dismiss();
-  });
-
+  // Um alert(1) executado seria capturado como janela nativa no afterEach
   const nomeMalicioso = '<img src=x onerror=alert(1)>';
   await page.getByText('Novo projeto').click();
   await preencherFormulario(page, { ...projetoNovo, nome: nomeMalicioso });
@@ -118,13 +126,15 @@ test('exibe HTML digitado como texto, sem executá-lo (XSS)', async ({ page }) =
 
   await expect(page.getByRole('heading', { name: nomeMalicioso })).toBeVisible();
   await expect(page.getByTestId('lista-projetos').locator('img')).toHaveCount(0);
-  expect(alertaDisparado).toBe(false);
 });
 
-test('exclui projeto e restaura os dados de exemplo', async ({ page }) => {
-  page.on('dialog', (dialogo) => dialogo.accept());
-
+test('exclui projeto pelo modal e restaura os dados de exemplo', async ({ page }) => {
   await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
+  await expect(modal(page)).toBeVisible();
+  await expect(modal(page)).toContainText('Excluir projeto');
+  await expect(modal(page)).toContainText('Coleta Seletiva nas Escolas Modelo');
+  await modal(page).getByRole('button', { name: 'Excluir' }).click();
+  await expect(modal(page)).toBeHidden();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO - 1);
   await expect(page.getByTestId('lista-projetos')).not.toContainText('Coleta Seletiva');
 
@@ -132,14 +142,48 @@ test('exclui projeto e restaura os dados de exemplo', async ({ page }) => {
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO - 1);
 
   await page.getByRole('button', { name: 'Restaurar dados de exemplo' }).click();
+  await expect(modal(page)).toContainText('Restaurar dados de exemplo');
+  await modal(page).getByRole('button', { name: 'Restaurar' }).click();
+  await expect(modal(page)).toBeHidden();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
   await expect(page.getByTestId('lista-projetos')).toContainText('Coleta Seletiva');
 });
 
-test('cancelar a confirmação não exclui o projeto', async ({ page }) => {
-  page.on('dialog', (dialogo) => dialogo.dismiss());
+test('modal abre com foco em Cancelar e cancelar não exclui', async ({ page }) => {
   await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
+  await expect(modal(page)).toBeVisible();
+  await expect(modal(page).getByRole('button', { name: 'Cancelar' })).toBeFocused();
+
+  await modal(page).getByRole('button', { name: 'Cancelar' }).click();
+  await expect(modal(page)).toBeHidden();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+});
+
+test('Esc e clique fora do modal cancelam a ação', async ({ page }) => {
+  const excluir = page.getByRole('button', { name: /^Excluir Coleta Seletiva/ });
+
+  await excluir.click();
+  await expect(modal(page)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(modal(page)).toBeHidden();
+
+  await excluir.click();
+  await expect(modal(page)).toBeVisible();
+  await page.mouse.click(5, 5); // fundo escurecido, fora da caixa
+  await expect(modal(page)).toBeHidden();
+
+  await page.getByRole('button', { name: 'Restaurar dados de exemplo' }).click();
+  await page.keyboard.press('Escape');
+  await expect(modal(page)).toBeHidden();
+
+  await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+});
+
+test('clicar dentro da caixa do modal não cancela', async ({ page }) => {
+  await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
+  await modal(page).locator('#modal-mensagem').click();
+  await expect(modal(page)).toBeVisible();
+  await modal(page).getByRole('button', { name: 'Cancelar' }).click();
 });
 
 test('descarta dados adulterados no localStorage', async ({ page }) => {

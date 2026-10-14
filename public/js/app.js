@@ -29,6 +29,46 @@ function el(tag, props = {}, filhos = []) {
   return elemento;
 }
 
+// Confirmação em modal (<dialog>) no lugar de window.confirm.
+// Resolve true só ao clicar em "Confirmar"; Cancelar, Esc ou clique fora resolvem false.
+function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar' }) {
+  const modal = document.getElementById('modal-confirmacao');
+  const botaoConfirmar = document.getElementById('modal-confirmar');
+  const botaoCancelar = document.getElementById('modal-cancelar');
+  document.getElementById('modal-titulo').textContent = titulo;
+  document.getElementById('modal-mensagem').textContent = mensagem;
+  botaoConfirmar.textContent = textoConfirmar;
+
+  return new Promise((resolver) => {
+    const fechar = (resultado) => () => modal.close(resultado);
+    const aoConfirmar = fechar('confirmar');
+    const aoCancelar = fechar('cancelar');
+    // Clique no fundo escurecido (fora da caixa do modal) cancela
+    const aoClicarFora = (evento) => {
+      if (evento.target !== modal) return;
+      const caixa = modal.getBoundingClientRect();
+      const dentro = evento.clientX >= caixa.left && evento.clientX <= caixa.right
+        && evento.clientY >= caixa.top && evento.clientY <= caixa.bottom;
+      if (!dentro) modal.close('cancelar');
+    };
+
+    botaoConfirmar.addEventListener('click', aoConfirmar);
+    botaoCancelar.addEventListener('click', aoCancelar);
+    modal.addEventListener('click', aoClicarFora);
+    modal.addEventListener('close', () => {
+      botaoConfirmar.removeEventListener('click', aoConfirmar);
+      botaoCancelar.removeEventListener('click', aoCancelar);
+      modal.removeEventListener('click', aoClicarFora);
+      resolver(modal.returnValue === 'confirmar');
+    }, { once: true });
+
+    modal.returnValue = '';
+    modal.showModal();
+    // Ação destrutiva: o foco inicial fica no botão seguro
+    botaoCancelar.focus();
+  });
+}
+
 function renderizarResumo(projetos) {
   const resumo = resumoPorStatus(projetos);
   const cartoes = [
@@ -66,8 +106,13 @@ function renderizarProjeto(p) {
 
   const excluir = el('button', { type: 'button', className: 'botao-secundario', textContent: 'Excluir' });
   excluir.setAttribute('aria-label', `Excluir ${p.nome}`);
-  excluir.addEventListener('click', () => {
-    if (window.confirm(`Excluir o projeto "${p.nome}"?`)) {
+  excluir.addEventListener('click', async () => {
+    const confirmado = await confirmar({
+      titulo: 'Excluir projeto',
+      mensagem: `Excluir o projeto "${p.nome}"? Esta ação não pode ser desfeita.`,
+      textoConfirmar: 'Excluir'
+    });
+    if (confirmado) {
       repositorio.remover(p.id);
       atualizar();
     }
@@ -132,8 +177,13 @@ function configurarFormulario() {
 
 function iniciar() {
   document.getElementById('filtro-status').addEventListener('change', atualizar);
-  document.getElementById('restaurar').addEventListener('click', () => {
-    if (window.confirm('Substituir todos os projetos pelos dados fictícios de exemplo?')) {
+  document.getElementById('restaurar').addEventListener('click', async () => {
+    const confirmado = await confirmar({
+      titulo: 'Restaurar dados de exemplo',
+      mensagem: 'Substituir todos os projetos pelos dados fictícios de exemplo? Os projetos cadastrados serão perdidos.',
+      textoConfirmar: 'Restaurar'
+    });
+    if (confirmado) {
       repositorio.restaurar();
       atualizar();
     }

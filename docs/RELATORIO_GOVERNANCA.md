@@ -657,3 +657,94 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou a alteração do `.gitignore`, o commit e o push.
+- Registro posterior: o commit desta iteração é o `1c3c778`, com push para `origin/main` (`c27abf8..1c3c778`).
+
+---
+
+## Iteração 17 — 2026-10-14 — Explicação completa do sistema
+
+### Prompt do humano
+
+> pronto, agora finalizamos o projeto. Agora quero que voce me explique o que é esse sistema que construimos, o que ele faz, para que ele serve e como ele funciona. me resuma ele por completo (nao faça nenhuma alteração no sistema e nem documente nada nos .md)
+
+### O que o assistente executou
+
+- Apenas explicação: o que é o sistema, funcionalidades, arquitetura com localStorage, segurança, testes, CI, deploy e governança.
+- **Nenhuma alteração** e, como pedido, **nenhum registro feito na hora**. Este registro foi feito na iteração seguinte, depois que o humano autorizou voltar a registrar.
+
+### Aprovações do humano
+
+- Nenhuma alteração autorizada nesta iteração.
+
+---
+
+## Iteração 18 — 2026-10-14 — Confirmações em modal no lugar de janelas nativas
+
+### Prompt do humano
+
+> testando o projeto, vi que quando ele pede confirmação de qualquer coisa, ele abre um alert. Eu quero que toda confirmação seja feita um modal, solicitando essa confirmação, nao quero que nada seja feito em alert. Pode voltar a registrar as alterações e realizar mudanças necessárias.
+
+### O que o assistente executou
+
+**Levantamento**
+- Busca no front-end: 2 usos de `window.confirm`, em "Excluir" (`app.js`) e em "Restaurar dados de exemplo" (`app.js`). Não havia `alert()` nem `prompt()`.
+- O `role="alert"` da lista de erros do formulário é um atributo de acessibilidade, para leitores de tela, e **não abre janela**. Foi mantido.
+
+**Implementação**
+- `public/index.html`: modal `<dialog id="modal-confirmacao">` com título, mensagem e botões "Cancelar" e confirmar, ligado por `aria-labelledby` e `aria-describedby`.
+- `public/js/app.js`: nova função `confirmar({ titulo, mensagem, textoConfirmar })`, que retorna uma Promise:
+  - só resolve `true` com o clique em confirmar; Cancelar, **Esc** e **clique no fundo escurecido** resolvem `false`;
+  - clicar dentro da caixa do modal não cancela, pois a posição do clique é comparada com a área da caixa;
+  - o foco inicial fica em **Cancelar**, o botão seguro para ações destrutivas;
+  - os textos entram por `textContent`, mantendo a proteção contra XSS;
+  - os listeners são removidos ao fechar.
+- Os dois `window.confirm` foram trocados pelo modal, com textos mais claros: "Excluir projeto", com o aviso "Esta ação não pode ser desfeita", e "Restaurar dados de exemplo", com o aviso "Os projetos cadastrados serão perdidos".
+- `public/styles.css`: estilos do modal (fundo escurecido, largura adaptável ao celular, tema escuro) e do botão de perigo (vermelho).
+
+**Garantias por teste**
+- `test/sem-dialogos-nativos.test.js` (novo): varre `public/**/*.js|html` e falha se encontrar `alert(`, `confirm(` ou `prompt(`. A expressão regular foi conferida: bloqueia `window.confirm(...)` e `alert(1)`, e não bloqueia `confirmar(`, comentários nem `role="alert"`.
+- `e2e/app.spec.js`:
+  - **todos os testes** agora falham se aparecer qualquer janela nativa (`page.on('dialog')` registra e o `afterEach` verifica);
+  - o teste de XSS foi simplificado, porque essa verificação geral já cobre um `alert(1)` executado;
+  - testes reescritos e novos: exclusão e restauração confirmadas pelo modal; foco inicial em Cancelar e cancelar sem excluir; Esc e clique fora cancelam; clique dentro da caixa não cancela.
+- `README.md`: regra do modal e novo arquivo de teste documentados.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `public/index.html` | Modificado (modal) |
+| `public/js/app.js` | Modificado (`confirmar()` no lugar de `window.confirm`) |
+| `public/styles.css` | Modificado (estilos do modal) |
+| `test/sem-dialogos-nativos.test.js` | Criado |
+| `e2e/app.spec.js` | Modificado |
+| `README.md` | Modificado |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 17 e 18) |
+
+### Testes e dependências
+
+- `npm test`: **72/72 aprovados** (71 anteriores + 1 novo).
+- `npx playwright test` (local): **22/22 aprovados** (11 cenários × desktop e mobile).
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Autorizou as alterações necessárias e a volta do registro no relatório.
+- Commit e push **ainda não autorizados**. O deploy na Vercel só será atualizado depois do push.
+
+---
+
+## Iteração 19 — 2026-10-14 — Commit e push do modal de confirmação
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `feat: confirmações em modal próprio no lugar de janelas nativas do navegador`, com push para `origin/main`. Inclui as alterações da iteração 18 e este relatório.
+- O push dispara a CI no GitHub Actions e um novo deploy na Vercel. **O humano deve conferir os resultados**, já que o assistente não tem acesso à API do repositório privado.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.

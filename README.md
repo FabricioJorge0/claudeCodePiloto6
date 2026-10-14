@@ -36,6 +36,8 @@ Segurança do workflow: permissão apenas de leitura (`contents: read`), checkou
 
 Funcionalidades: resumo por status, filtro, cadastro de projeto com validação, exclusão e restauração dos dados de exemplo.
 
+Toda confirmação é feita em **modal próprio** (`<dialog>`), nunca com `alert`, `confirm` ou `prompt` do navegador. O foco inicial fica em "Cancelar", e Esc ou clique fora do modal cancelam a ação. Essa regra é garantida por testes: uma verificação estática do código em `test/sem-dialogos-nativos.test.js` e uma verificação no navegador em todos os testes E2E.
+
 ## Como executar
 
 Requisito: Node.js 22 ou superior.
@@ -84,6 +86,7 @@ test/
   projetos.test.js       regras de negócio e validação
   repositorio.test.js    localStorage (com armazenamento simulado)
   server.test.js         servidor e segurança
+  sem-dialogos-nativos.test.js  proíbe alert/confirm/prompt no front-end
 e2e/
   app.spec.js            fluxos no navegador (Playwright)
 playwright.config.js     projetos "desktop" e "mobile" (Pixel 7); sobe o servidor sozinho
