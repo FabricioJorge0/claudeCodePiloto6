@@ -1,7 +1,8 @@
 // Dados 100% FICTÍCIOS, usados apenas para demonstração.
 // Nenhum projeto, pessoa, município ou órgão aqui representado existe.
+// Carregados no localStorage na primeira visita (ou ao restaurar).
 
-export const projetos = [
+export const dadosExemplo = [
   {
     id: 1,
     nome: 'Recuperação de Nascentes do Córrego Imaginário',

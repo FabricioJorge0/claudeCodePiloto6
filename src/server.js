@@ -1,10 +1,10 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname, join, normalize, resolve, sep } from 'node:path';
+import { extname, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { projetos as dadosFicticios } from './data/projetos.js';
-import { buscarProjeto, listarProjetos, resumoPorStatus } from './projetos.js';
+// Não há banco de dados nem API de dados: o servidor apenas entrega os
+// arquivos estáticos. Os projetos ficam no localStorage do navegador.
 
 const PASTA_PUBLICA = resolve(fileURLToPath(new URL('../public', import.meta.url)));
 
@@ -50,7 +50,7 @@ async function servirEstatico(res, caminho) {
   }
 }
 
-export function criarServidor({ projetos = dadosFicticios } = {}) {
+export function criarServidor() {
   return createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');
@@ -63,35 +63,10 @@ export function criarServidor({ projetos = dadosFicticios } = {}) {
     } catch {
       return enviarJson(res, 400, { erro: 'Requisição inválida' });
     }
-    const { pathname, searchParams } = url;
+    const { pathname } = url;
 
     if (pathname === '/health') {
       return enviarJson(res, 200, { status: 'ok' });
-    }
-
-    if (pathname === '/api/projetos') {
-      try {
-        const status = searchParams.get('status') ?? undefined;
-        return enviarJson(res, 200, listarProjetos(projetos, { status }));
-      } catch (erro) {
-        return enviarJson(res, 400, { erro: erro.message });
-      }
-    }
-
-    const matchId = pathname.match(/^\/api\/projetos\/([^/]+)$/);
-    if (matchId) {
-      const projeto = buscarProjeto(projetos, matchId[1]);
-      return projeto
-        ? enviarJson(res, 200, projeto)
-        : enviarJson(res, 404, { erro: 'Projeto não encontrado' });
-    }
-
-    if (pathname === '/api/resumo') {
-      return enviarJson(res, 200, resumoPorStatus(projetos));
-    }
-
-    if (pathname.startsWith('/api/')) {
-      return enviarJson(res, 404, { erro: 'Rota não encontrada' });
     }
 
     try {

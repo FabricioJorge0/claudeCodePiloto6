@@ -128,6 +128,49 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 
 .rodape { color: var(--texto-suave); font-size: .85rem; padding-bottom: 24px; }
 
+.acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.painel {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 0 16px;
+  margin-top: 24px;
+}
+.painel summary { cursor: pointer; }
+.painel summary h2 { display: inline; margin: 0; }
+.painel summary { padding: 12px 0; }
+
+.formulario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.formulario label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.formulario input, .formulario select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+}
+.formulario .erros, .formulario .botao { grid-column: 1 / -1; }
+
+.erros { margin: 0; padding-left: 20px; color: var(--atrasado); font-size: .9rem; }
+.erros:empty { display: none; }
+
+.botao, .botao-secundario {
+  font: inherit;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.botao { background: var(--primaria); color: var(--superficie); border: 1px solid var(--primaria); justify-self: start; }
+.botao-secundario { background: transparent; color: var(--texto); border: 1px solid var(--borda); align-self: flex-start; }
+.botao:focus-visible, .botao-secundario:focus-visible { outline: 2px solid var(--primaria); outline-offset: 2px; }
+
 @media (max-width: 480px) {
   .lista { grid-template-columns: 1fr; }
   .barra { flex-direction: column; align-items: flex-start; }
