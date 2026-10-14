@@ -496,3 +496,97 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 
 - Confirmou que a CI passou.
 - Autorizou o commit e o push do relatório.
+- Registro posterior: o commit desta iteração é o `ba73600`, com push para `origin/main` (`346b8df..ba73600`).
+
+---
+
+## Iteração 12 — 2026-10-14 — Orientação para deploy na Vercel
+
+### Prompt do humano
+
+> eu quero subir esse projeto no vercel, como eu faço para subir ele? me de os passos e configurações necessárias no vercel. Nao mude nada no projeto
+
+### O que o assistente executou
+
+- Somente orientação; **nenhum arquivo foi alterado**, conforme pedido. Por isso, esta iteração não foi registrada na hora; o registro foi feito na iteração seguinte, quando o humano voltou a autorizar alterações.
+- Passos e configurações indicados:
+  - importar o repositório do GitHub, dando acesso ao repositório privado pelo GitHub App da Vercel;
+  - Framework Preset **Other**, Build Command **vazio**, Output Directory **`public`**, Install Command padrão, nenhuma variável de ambiente;
+  - Node.js 22.x ou 24.x.
+- Ressalvas informadas ao humano:
+  - os cabeçalhos de segurança do `src/server.js` **não são aplicados na Vercel**; mantê-los exigiria um `vercel.json`;
+  - a rota `/health` não existe na Vercel;
+  - a Vercel publica mesmo se a CI falhar; a recomendação é proteger a branch `main`;
+  - os dados no localStorage são separados por navegador e por domínio.
+
+### Aprovações do humano
+
+- Nenhuma alteração autorizada nesta iteração. O deploy foi feito pelo humano.
+
+---
+
+## Iteração 13 — 2026-10-14 — Testes E2E contra o ambiente publicado na Vercel
+
+### Prompt do humano
+
+> O sistema foi publicado na Vercel nesta URL: claude-code-piloto6-lx9ut0ec6-fabriciojorge0s-projects.vercel.app. Configure a variável de ambiente para o Playwright apontar para essa URL e execute a suíte de testes E2E para gerarmos o relatório e o trace exigidos na rubrica. Pode voltar a alterar o projeto, se necessário
+
+### O que o assistente executou
+
+**Verificação de acesso (somente leitura)**
+- A URL informada (`...-lx9ut0ec6-...vercel.app`) respondeu **HTTP 302 para `vercel.com/sso-api`**. É uma URL de deploy específico, protegida pelo *Deployment Protection* (Vercel Authentication). Os testes cairiam na tela de login da Vercel.
+- O assistente verificou os domínios de produção prováveis e encontrou **`https://claude-code-piloto6.vercel.app` respondendo 200**, sem proteção.
+- **Confirmação de que esse domínio é deste projeto:** o SHA-256 de `index.html`, `styles.css` e dos quatro arquivos `js/*.js` publicados é **idêntico** ao dos arquivos locais. Isso confirma que é o deploy do humano, já com a correção do commit `346b8df`.
+- Decisão do assistente: rodar a suíte contra o domínio de produção. A outra opção, o segredo de bypass da URL protegida, ficou suportada na configuração para uso futuro.
+
+**Alteração do projeto**
+- `playwright.config.js`:
+  - variável **`BASE_URL`**: quando definida, os testes usam essa URL e o servidor local **não** sobe; sem ela, o comportamento local e da CI continua igual;
+  - com `BASE_URL`, grava o **trace de todos os testes** (`trace: 'on'`); local e CI continuam com `on-first-retry`;
+  - relatório **HTML sempre gerado** (`playwright-report/`, `open: 'never'`) junto com o `list`;
+  - suporte opcional a `VERCEL_AUTOMATION_BYPASS_SECRET`, que envia os cabeçalhos `x-vercel-protection-bypass` e `x-vercel-set-bypass-cookie`. O segredo vem só da variável de ambiente e nunca do código.
+- `README.md`: seção "E2E contra o ambiente publicado (Vercel)".
+
+**Execução**
+- `$env:BASE_URL = "https://claude-code-piloto6.vercel.app"; npx playwright test`: **18/18 aprovados** (9 desktop + 9 mobile), em 8,1 s.
+- Evidências geradas, fora do Git por causa do `.gitignore`:
+  - `playwright-report/index.html`: relatório HTML;
+  - `test-results/*/trace.zip`: **18 traces**, um por teste.
+- Verificação de que nada quebrou: Playwright local (servidor próprio) com 18/18 aprovados, usando uma pasta temporária de saída para não sobrescrever as evidências; `npm test` com 71/71 aprovados.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `playwright.config.js` | Modificado (`BASE_URL`, trace, relatório HTML, bypass opcional) |
+| `README.md` | Modificado |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 12 e 13) |
+| `playwright-report/`, `test-results/` | Gerados (não versionados) |
+
+### Testes e dependências
+
+- E2E na Vercel: 18 aprovados, 0 falhas. E2E local: 18 aprovados. Node: 71 aprovados.
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Autorizou alterar o projeto, configurar a variável de ambiente e rodar a suíte E2E.
+- O uso do domínio de produção, no lugar da URL protegida informada, foi decisão do assistente e foi comunicado ao humano.
+- Commit **ainda não autorizado**.
+
+---
+
+## Iteração 14 — 2026-10-14 — Commit dos testes E2E contra ambiente publicado
+
+### Prompt do humano
+
+> sim faça o commit e push
+
+### O que o assistente executou
+
+- Commit `test: permite rodar E2E contra ambiente publicado (BASE_URL) com trace e relatório HTML`, com push para `origin/main`. Inclui `playwright.config.js`, `README.md` e este relatório.
+- As evidências (`playwright-report/`, `test-results/`) **não** foram versionadas; o `.gitignore` as exclui e o humano não pediu que fossem incluídas.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.

@@ -50,6 +50,25 @@ npm run test:e2e    # testes de ponta a ponta (Playwright, desktop e celular)
 npm run test:all    # todos os testes
 ```
 
+### E2E contra o ambiente publicado (Vercel)
+
+Com `BASE_URL` definida, o Playwright testa a URL informada (sem subir servidor local) e grava o **trace de todos os testes**:
+
+```powershell
+# PowerShell
+$env:BASE_URL = "https://claude-code-piloto6.vercel.app"
+npx playwright test
+npx playwright show-report                          # relatório HTML (playwright-report/)
+npx playwright show-trace test-results/<teste>/trace.zip
+```
+
+```bash
+# bash
+BASE_URL=https://claude-code-piloto6.vercel.app npx playwright test
+```
+
+URLs de deploy protegidas pela Vercel (ex.: `...-<hash>-<time>.vercel.app`) exigem o segredo de *Protection Bypass for Automation* na variável `VERCEL_AUTOMATION_BYPASS_SECRET`. Nunca coloque esse segredo no código.
+
 ## Estrutura
 
 ```
