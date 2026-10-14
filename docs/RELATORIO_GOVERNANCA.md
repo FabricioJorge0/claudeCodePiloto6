@@ -978,3 +978,54 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `c24bfed`, com push para `origin/main` (`0549c1d..c24bfed`). Logo depois, o assistente conferiu que o `styles.css` publicado em `claude-code-piloto6.vercel.app` já era o novo. A Vercel publicou sozinha, o que confirma que a atualização automática voltou a funcionar depois do *promote*.
+
+---
+
+## Iteração 28 — 2026-10-14 — CI aprovada na nova paleta
+
+### Prompt do humano
+
+> a CI passou
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `c24bfed` passou** (testes Node e os 24 testes Playwright, incluindo o teste da paleta, no Linux).
+- Nenhuma alteração de código e nenhum commit; este registro fica pendente até a próxima autorização.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+
+---
+
+## Iteração 29 — 2026-10-14 — Evidências E2E v3 (paleta) e commit do relatório
+
+### Prompt do humano
+
+> sim, faça o commit e push e gere o zip v3
+
+### O que o assistente executou
+
+- Apagou os resultados locais anteriores e rodou `$env:BASE_URL = "https://claude-code-piloto6.vercel.app"; npx playwright test`: **24/24 aprovados** (12 desktop + 12 mobile), em 8,8 s, com 24 traces. O teste da paleta também passou no ambiente publicado.
+- Verificou que o trace do teste de paleta **contém requisições para `claude-code-piloto6.vercel.app`**.
+- Gerou **`evidencias-e2e-vercel-2026-10-14-v3-paleta.zip`** (13,37 MB, 69 arquivos), com relatório HTML, 24 traces e um `LEIAME.txt` (commit `c24bfed`, 12 cenários).
+- Os zips v1 (18 testes) e v2 (22 testes) foram **mantidos**. Todos são ignorados pelo Git (`evidencias-*.zip`).
+- Commit `docs: registra CI aprovada e evidências E2E v3 no relatório de governança`, com push para `origin/main`. Inclui somente este relatório (iterações 28 e 29).
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `evidencias-e2e-vercel-2026-10-14-v3-paleta.zip` | Criado (não versionado) |
+| `playwright-report/`, `test-results/` | Regenerados (não versionados) |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 28 e 29) |
+
+### Testes e dependências
+
+- E2E na Vercel: 24 aprovados, 0 falhas.
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push do relatório e a geração do zip v3.
