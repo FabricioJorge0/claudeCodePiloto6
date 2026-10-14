@@ -448,3 +448,51 @@ Registrar, de forma contínua e auditável, o processo de desenvolvimento assist
 
 - Autorizou o plano completo: correção, teste mais detalhado, reprodução local, execução dos testes, commit e push.
 - A confirmação de que a CI passou fica a cargo do humano, pois o repositório é privado e o assistente não tem acesso à API.
+
+### Pós-commit (registrado após o commit `346b8df`)
+
+- A primeira tentativa de commit **falhou**: as aspas dentro da mensagem quebraram a passagem de argumentos do PowerShell 5.1 para o git (`error: pathspec ... did not match`). Nada foi commitado nem enviado (`Everything up-to-date`).
+- Segunda tentativa: a mensagem foi gravada num arquivo temporário e passada com `git commit -F`. Resultado: commit `346b8df` (`fix: corrige rolagem horizontal no mobile com fontes largas`) e push para `origin/main` (`da8aec3..346b8df`).
+- Aguardando o humano confirmar o resultado da CI.
+
+---
+
+## Iteração 11 — 2026-10-14 — CI aprovada e fechamento do ciclo
+
+### Prompt do humano
+
+> a CI passou, pode fazer o commit e push do relatório
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `346b8df` passou** no GitHub Actions (jobs `unidade` com Node 22/24 e `e2e` com Playwright desktop e mobile).
+- Commit e push do relatório de governança (`docs: registra correção da CI e aprovação final no relatório de governança`).
+
+### Situação final do ciclo
+
+| Etapa | Entrega | Commit |
+|---|---|---|
+| 1 | Git, `.gitignore`, README, relatório | `65dada5` (+ merge `66400c1`) |
+| 2 | Estrutura básica (servidor Node + interface responsiva) | `10ccac8` |
+| 3 | Persistência em localStorage + 71 testes `node:test` | `8661805` |
+| 4 | 18 testes Playwright (desktop + mobile) | `70bf772` |
+| 5 | CI no GitHub Actions | `da8aec3` |
+| — | Correção da falha de layout encontrada pela CI | `346b8df` |
+
+A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste automatizado encontrou, em outro sistema operacional, um defeito de layout que não aparecia no ambiente local. O defeito foi reproduzido, corrigido e verificado antes de chegar ao usuário final.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iteração 11) |
+
+### Testes e dependências
+
+- CI no GitHub Actions: **aprovada** (confirmação do humano).
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+- Autorizou o commit e o push do relatório.
