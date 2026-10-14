@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Governança de Projetos Ambientais</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="topo">
+    <h1>Governança de Projetos Ambientais</h1>
+    <p class="aviso" role="note">Ambiente de demonstração: todos os dados são fictícios.</p>
+  </header>
+
+  <main>
+    <section aria-labelledby="titulo-resumo">
+      <h2 id="titulo-resumo">Resumo</h2>
+      <div id="resumo" class="resumo" data-testid="resumo"></div>
+    </section>
+
+    <section aria-labelledby="titulo-projetos">
+      <div class="barra">
+        <h2 id="titulo-projetos">Projetos</h2>
+        <label class="filtro">
+          Status
+          <select id="filtro-status" data-testid="filtro-status">
+            <option value="">Todos</option>
+            <option value="planejamento">Planejamento</option>
+            <option value="em_execucao">Em execução</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="concluido">Concluído</option>
+          </select>
+        </label>
+      </div>
+      <p id="mensagem" class="mensagem" role="status" aria-live="polite"></p>
+      <ul id="lista-projetos" class="lista" data-testid="lista-projetos"></ul>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <p>Projeto piloto: ciclo de desenvolvimento seguro.</p>
+  </footer>
+</body>
+</html>
