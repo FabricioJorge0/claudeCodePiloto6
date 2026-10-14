@@ -50,7 +50,7 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 
 .resumo {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -59,8 +59,16 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   border: 1px solid var(--borda);
   border-radius: 8px;
   padding: 12px 16px;
+  min-width: 0;
 }
-.cartao-resumo .valor { font-size: 1.6rem; font-weight: 700; display: block; }
+/* Valores longos (ex.: moeda) não podem alargar o cartão: a fonte se adapta
+   à largura da tela e, se ainda faltar espaço, o texto quebra. */
+.cartao-resumo .valor {
+  font-size: clamp(1.1rem, 5vw, 1.6rem);
+  font-weight: 700;
+  display: block;
+  overflow-wrap: anywhere;
+}
 .cartao-resumo .rotulo { color: var(--texto-suave); font-size: .85rem; }
 
 .barra {
@@ -87,7 +95,7 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   padding: 0;
   margin: 0 0 32px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -99,6 +107,8 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .projeto h3 { margin: 0; font-size: 1rem; }
 .projeto dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .9rem; }
@@ -143,11 +153,11 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 
 .formulario {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 12px;
   padding-bottom: 16px;
 }
-.formulario label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.formulario label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; min-width: 0; }
 .formulario input, .formulario select {
   padding: 8px;
   border-radius: 6px;

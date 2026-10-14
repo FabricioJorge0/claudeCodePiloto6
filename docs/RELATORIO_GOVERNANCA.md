@@ -358,3 +358,93 @@ Registrar, de forma contínua e auditável, o processo de desenvolvimento assist
 
 - Autorizou o commit e o push da Etapa 4.
 - Autorizou a Etapa 5. O plano apresentado já incluía o push do workflow e a conferência da execução no GitHub.
+
+### Pós-commit (registrado após o commit `da8aec3`)
+
+- Commit `da8aec3`: `ci: workflow do GitHub Actions com auditoria, testes Node e Playwright`, seguido de push para `origin/main` (`70bf772..da8aec3`).
+- Tentativa de verificar a execução da CI pela API pública do GitHub, sem autenticação: todas as consultas retornaram **404 Not Found** durante cerca de 10 minutos. Isso indica que o repositório é **privado** e que não há credenciais da API no ambiente (o `gh` não está instalado).
+- **Resultado da CI não verificado pelo assistente.** Cabe ao humano conferir em `https://github.com/FabricioJorge0/claudeCodePiloto6/actions`.
+- Este trecho do relatório ainda não foi commitado.
+
+---
+
+## Iteração 9 — 2026-10-14 — Falha da CI: diagnóstico
+
+### Prompt do humano
+
+> A CI nao passou no erro no teste playwright (desktop e mobile)
+>
+> (log colado pelo humano, resumido: 17 testes aprovados; **falhou** `[mobile] › e2e/app.spec.js:156:1 › layout responsivo sem rolagem horizontal`, nas 3 tentativas, com `expect(semRolagem).toBe(true)`, recebido `false`)
+
+### O que o assistente executou
+
+- Analisou o log sem executar nada. Apenas **1 teste falhou, e só no projeto mobile**; os 9 testes de desktop passaram.
+- Diagnóstico: a página tem rolagem horizontal no Linux da CI, mas não no Windows. A causa provável é o cartão "Orçamento total" do resumo. O valor "R$ 830.000,00" usa fonte grande em negrito e espaço não separável (o `Intl` formata a moeda com U+00A0), então não quebra linha. A fonte padrão do Linux (DejaVu Sans) é mais larga que a Segoe UI do Windows, o texto passa da largura do cartão (cerca de 150 px úteis em tela de 412 px), e o item do grid força a página a alargar.
+- Conclusão: **o teste encontrou um defeito real de layout**, que aparece conforme a fonte do sistema. Não é um problema do teste.
+- Correção proposta, aguardando autorização:
+  1. em `styles.css`, usar `min-width: 0` e quebra de texto (`overflow-wrap: anywhere`) nos cartões e itens do grid, um tamanho de fonte adaptável no valor do resumo e colunas com `minmax(min(Xpx, 100%), 1fr)`;
+  2. no teste, listar na mensagem de falha quais elementos ultrapassam a largura da tela;
+  3. reproduzir o problema localmente com uma fonte mais larga (Verdana) antes e depois da correção;
+  4. rodar as suítes Node e Playwright, fazer commit e push, e o humano confere a CI.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (registro da iteração 9) |
+
+### Testes e dependências
+
+- Nenhum teste executado nesta iteração (aguardando autorização).
+
+### Aprovações do humano
+
+- O humano informou o resultado da CI (falha) e colou o log.
+- Correção **ainda não autorizada**.
+
+---
+
+## Iteração 10 — 2026-10-14 — Correção da rolagem horizontal no mobile
+
+### Prompt do humano
+
+> pode seguir com o plano
+
+### O que o assistente executou
+
+**Reprodução, antes da correção**
+- Criou um script temporário de diagnóstico **fora do repositório**, na pasta temporária da sessão (`reproduzir-overflow.mjs`). Ele abre a página como um Pixel 7 com a fonte padrão e com Verdana, que é larga e simula a fonte do Linux.
+- Na primeira execução, a **CSP da página bloqueou** a injeção da fonte de teste, o que confirma que a política de segurança funciona. Por isso o script passou a usar `bypassCSP: true`, **apenas no diagnóstico**; o sistema não foi alterado nesse ponto.
+- Resultado com Verdana: `scrollWidth=441` para uma tela de `412` px, ou seja, **problema reproduzido**.
+- Culpado: `span.valor` com "R$ 830.000,00" dentro do cartão "Orçamento total". O valor **já transbordava do cartão com a fonte do Windows**, só que ainda dentro da margem da página.
+
+**Correção**
+- `public/styles.css`:
+  - `min-width: 0` nos cartões do resumo, nos cartões de projeto e nos campos do formulário;
+  - fonte do valor adaptável: `clamp(1.1rem, 5vw, 1.6rem)`;
+  - `overflow-wrap: anywhere`, para que valores e nomes longos quebrem linha;
+  - colunas dos grids com `minmax(min(Xpx, 100%), 1fr)`, para que nenhuma coluna fique maior que a tela.
+- `e2e/app.spec.js`: o teste de layout agora lista **quais elementos transbordam**, inclusive conteúdo vazando de dentro da própria caixa. Uma falha futura já indica o culpado.
+
+**Verificação, depois da correção**
+- Script de diagnóstico: fonte padrão `412/412` e Verdana `412/412`, **sem rolagem horizontal**.
+- `npm run test:all`: Node com **71/71 aprovados**; Playwright com **18/18 aprovados** (desktop e mobile).
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `public/styles.css` | Modificado (correção do layout) |
+| `e2e/app.spec.js` | Modificado (diagnóstico mais detalhado no teste de layout) |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 9 e 10) |
+| *(pasta temporária da sessão)* `reproduzir-overflow.mjs` | Criado fora do repositório, apenas para diagnóstico |
+
+### Testes e dependências
+
+- Node: 71 aprovados, 0 falhas. Playwright: 18 aprovados, 0 falhas.
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Autorizou o plano completo: correção, teste mais detalhado, reprodução local, execução dos testes, commit e push.
+- A confirmação de que a CI passou fica a cargo do humano, pois o repositório é privado e o assistente não tem acesso à API.

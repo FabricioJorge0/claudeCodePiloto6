@@ -154,6 +154,16 @@ test('descarta dados adulterados no localStorage', async ({ page }) => {
 });
 
 test('layout responsivo sem rolagem horizontal', async ({ page }, testInfo) => {
+  // Lista os elementos que ultrapassam a tela ou cujo conteúdo transborda,
+  // para a mensagem de falha já apontar o culpado (as fontes variam por SO).
+  const excedentes = await page.evaluate(() => {
+    const largura = document.documentElement.clientWidth;
+    return [...document.querySelectorAll('body *')]
+      .filter((e) => e.getBoundingClientRect().right > largura + 0.5 || e.scrollWidth > e.clientWidth + 1)
+      .map((e) => `<${e.tagName.toLowerCase()} class="${e.className}"> "${e.textContent.trim().slice(0, 40)}"`);
+  });
+  expect(excedentes, 'elementos que transbordam a largura disponível').toEqual([]);
+
   const semRolagem = await page.evaluate(
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
   );
