@@ -748,3 +748,59 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `d3b1578`, com push para `origin/main` (`1c3c778..d3b1578`). Logo depois, o assistente conferiu o domínio público da Vercel: o modal estava publicado e o `app.js` não tinha mais `window.confirm`.
+
+---
+
+## Iteração 20 — 2026-10-14 — Evidências E2E v2 (com modal)
+
+### Prompt do humano
+
+> a CI passou, pode gerar as evidências novas
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `d3b1578` passou**.
+- Apagou os resultados locais anteriores (`playwright-report/`, `test-results/`) e rodou `$env:BASE_URL = "https://claude-code-piloto6.vercel.app"; npx playwright test`: **22/22 aprovados** (11 desktop + 11 mobile), em 8,3 s, com 22 traces.
+- Verificou que um trace dos testes do modal **contém requisições para `claude-code-piloto6.vercel.app`**.
+- Gerou **`evidencias-e2e-vercel-2026-10-14-v2-modal.zip`** (11,12 MB, 65 arquivos), com relatório HTML, 22 traces e um `LEIAME.txt` atualizado (commit `d3b1578`, 11 cenários, regra de nenhuma janela nativa).
+- O zip anterior (`evidencias-e2e-vercel-2026-10-14.zip`, 18 testes) foi **mantido**. Os dois são ignorados pelo Git (`evidencias-*.zip`).
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `evidencias-e2e-vercel-2026-10-14-v2-modal.zip` | Criado (não versionado) |
+| `playwright-report/`, `test-results/` | Regenerados (não versionados) |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iteração 20) |
+
+### Testes e dependências
+
+- E2E na Vercel: 22 aprovados, 0 falhas.
+- Nenhuma dependência nova.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+- Autorizou gerar as novas evidências.
+- Commit deste registro **ainda não autorizado**.
+
+---
+
+## Iteração 21 — 2026-10-14 — Commit do registro das evidências v2
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `docs: registra evidências E2E v2 (modal) no relatório de governança`, com push para `origin/main`. Inclui somente este relatório (iterações 20 e 21).
+
+### Testes e dependências
+
+- Nenhum teste executado (apenas documentação).
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.
