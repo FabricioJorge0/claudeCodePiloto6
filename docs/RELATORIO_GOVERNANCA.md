@@ -254,3 +254,58 @@ Registrar, de forma contínua e auditável, o processo de desenvolvimento assist
 - Autorizou a Etapa 3, incluindo rodar os testes.
 - Definiu a restrição de arquitetura: sem banco de dados, tudo no localStorage.
 - Commit da Etapa 3 **ainda não autorizado**.
+
+---
+
+## Iteração 7 — 2026-10-14 — Commit da Etapa 3 e Etapa 4: Testes Playwright
+
+### Prompt do humano
+
+> sim, pode fazer o commit, push e seguir para a etapa 4
+
+### O que o assistente executou
+
+**Controle de versão**
+- Commit `8661805`: `feat: persistência em localStorage e testes automatizados com node:test`, seguido de push para `origin/main` (`10ccac8..8661805`).
+
+**Instalação de dependências**
+- `npm install -D @playwright/test`: Playwright 1.64.1 instalado **apenas como dependência de desenvolvimento**. Foram adicionados 3 pacotes; o `npm audit` encontrou **0 vulnerabilidades**. Isso criou o `package-lock.json`, que fixa as versões instaladas.
+- `npx playwright install chromium`: navegador Chromium baixado para a pasta de cache do usuário, fora do repositório.
+
+**Etapa 4: testes de ponta a ponta**
+- `playwright.config.js`: dois projetos, "desktop" (Desktop Chrome) e "mobile" (Pixel 7). O servidor sobe sozinho na porta 3100 e só fica pronto depois de responder em `/health`. Na CI: proibição de `test.only`, 2 novas tentativas em caso de falha, trace na nova tentativa e relatório HTML.
+- `e2e/app.spec.js`: 9 cenários, executados nos dois projetos:
+  1. carregamento da página, aviso de dados fictícios e resumo;
+  2. filtro por status;
+  3. cadastro de projeto, que continua presente depois de recarregar a página (o teste confere o conteúdo do localStorage);
+  4. erros de validação do formulário;
+  5. **XSS**: um nome com `<img onerror=alert(1)>` aparece como texto e nenhum alerta é disparado;
+  6. exclusão de projeto e restauração dos dados de exemplo;
+  7. cancelar a confirmação não exclui o projeto;
+  8. dados adulterados no localStorage são descartados;
+  9. layout responsivo sem rolagem horizontal, com uma coluna no celular e várias no desktop.
+- Todos os testes verificam que **não há erros no console**, o que também detecta violações de CSP.
+- `package.json`: scripts `test:e2e` e `test:all` adicionados.
+- `README.md`: instruções de instalação e de teste, e estrutura atualizada.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `package.json` | Modificado (devDependency e scripts) |
+| `package-lock.json` | Criado (pelo npm) |
+| `playwright.config.js` | Criado |
+| `e2e/app.spec.js` | Criado |
+| `README.md` | Modificado |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (registro da iteração 7) |
+
+### Testes e dependências
+
+- `npx playwright test`: **18 testes (9 desktop + 9 mobile), 18 aprovados, 0 falhas** (7,0 s).
+- Dependência de desenvolvimento: `@playwright/test@^1.64.1`. O sistema continua sem nenhuma dependência de execução.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push da Etapa 3.
+- Autorizou a Etapa 4, incluindo a instalação do `@playwright/test` e do navegador Chromium.
+- Commit da Etapa 4 **ainda não autorizado**.

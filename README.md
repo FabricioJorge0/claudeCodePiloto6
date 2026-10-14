@@ -18,7 +18,7 @@ Sistema web responsivo para acompanhar projetos ambientais (status, responsável
 | 1 | Controle de versão (Git, `.gitignore`, README) | Concluída |
 | 2 | Estrutura básica (servidor Node + página responsiva) | Concluída |
 | 3 | Testes Node + persistência em localStorage | Concluída |
-| 4 | Testes Playwright | Pendente |
+| 4 | Testes Playwright (desktop + celular) | Concluída |
 | 5 | CI com GitHub Actions | Pendente |
 
 ## Arquitetura
@@ -32,8 +32,13 @@ Funcionalidades: resumo por status, filtro, cadastro de projeto com validação,
 Requisito: Node.js 20 ou superior.
 
 ```bash
-npm start   # acesse http://localhost:3000
-npm test    # testes automatizados (node:test)
+npm install                          # instala o Playwright (apenas desenvolvimento)
+npx playwright install chromium      # baixa o navegador dos testes E2E
+
+npm start           # acesse http://localhost:3000
+npm test            # testes de unidade e servidor (node:test)
+npm run test:e2e    # testes de ponta a ponta (Playwright, desktop e celular)
+npm run test:all    # todos os testes
 ```
 
 ## Estrutura
@@ -51,6 +56,9 @@ test/
   projetos.test.js       regras de negócio e validação
   repositorio.test.js    localStorage (com armazenamento simulado)
   server.test.js         servidor e segurança
+e2e/
+  app.spec.js            fluxos no navegador (Playwright)
+playwright.config.js     projetos "desktop" e "mobile" (Pixel 7); sobe o servidor sozinho
 ```
 
 Status válidos: `planejamento`, `em_execucao`, `atrasado`, `concluido`.
