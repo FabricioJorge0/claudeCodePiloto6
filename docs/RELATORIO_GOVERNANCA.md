@@ -1029,3 +1029,37 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push do relatório e a geração do zip v3.
+- Registro posterior: o commit desta iteração é o `8078df9`, com push para `origin/main` (`c24bfed..8078df9`).
+
+---
+
+## Iteração 30 — 2026-10-14 — CI aprovada no último commit
+
+### Prompt do humano
+
+> a CI passou
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `8078df9` passou**.
+- Nenhuma alteração de código e nenhum commit; este registro fica pendente até a próxima autorização.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+
+---
+
+## Iteração 31 — 2026-10-14 — Commit do registro final
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `docs: registra CI aprovada no relatório de governança`, com push para `origin/main`. Inclui somente este relatório (iterações 30 e 31).
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.
