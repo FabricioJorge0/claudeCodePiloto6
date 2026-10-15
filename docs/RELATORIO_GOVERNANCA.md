@@ -1063,3 +1063,116 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `6e2e479`, com push para `origin/main` (`8078df9..6e2e479`).
+
+---
+
+## Iteração 32 — 2026-10-14 — CI aprovada no commit do registro final
+
+### Prompt do humano
+
+> a CI passou
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `6e2e479` passou**.
+- Para não criar um ciclo sem fim (commit do registro → nova CI → novo registro → novo commit), o assistente **recomendou não fazer um commit só para este registro**. Ele fica no arquivo local e entra no repositório junto com a próxima alteração real do projeto.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+
+---
+
+## Iteração 33 — 2026-10-14 — Impedimento na Vercel e material de entrega (registro posterior)
+
+### Prompts do humano
+
+> No vercel ele ainda esta mostrando o visual antigo e voltou a mostrar alert ao inves de modal e nao esta atualizando automaticamente o que é enviado para o github preciso arrumar isso, eu tentei fazer o promote, mas nao deu certo (nao altere nenhum .md)
+
+> eu preciso dessas informações para realizar a entrega desse projeto: (lista da entrega: URL Vercel, URL GitHub e hash, resultados de testes, dois prints, matriz de autonomia com 5 cenários, relatório de até 5 páginas)
+
+### O que o assistente executou
+
+- **Registro posterior:** o humano tinha pedido para não alterar nenhum `.md`, então estas etapas não foram registradas na hora. Elas são registradas agora, com a volta das alterações autorizadas.
+- **Diagnóstico da Vercel (somente leitura):** o domínio de produção servia arquivos com hash idêntico aos dos commits `346b8df`–`1c3c778` (a primeira versão publicada). Causa: um deploy antigo foi promovido, o que equivale a um rollback e desliga a atribuição automática. O humano promoveu o deploy correto, e o assistente confirmou que o modal e a paleta voltaram.
+- **Material de entrega** (pasta `entrega/`, fora do Git):
+  - relatório `.docx` e `.pdf` de 3 páginas, gerado com `python-docx` e convertido pelo Word;
+  - 2 prints da Vercel com dados fictícios;
+  - cópia do zip de evidências v3.
+- O humano escolheu o formato Word e a pasta `entrega/` fora do Git (pergunta feita pelo assistente). Foi adicionado `entrega/` ao `.gitignore`.
+- Testes rodados novamente: Node com 72/72; Playwright local com 24/24; `npm audit` com 0 vulnerabilidades.
+- Durante a conversão, um processo do Word aberto pela automação travou. O assistente confirmou pela linha de comando (`/Automation -Embedding`) que era o processo da automação, e não um Word do usuário, antes de encerrá-lo.
+
+### Aprovações do humano
+
+- Fez o promote na Vercel.
+- Escolheu o formato e o local da entrega.
+
+---
+
+## Iteração 34 — 2026-10-15 — Modal de detalhes, alteração de status e novos filtros
+
+### Prompt do humano
+
+> Atualmente o site me permite visualizar os projetos e excluir
+> me permite tambem criar novos projetos e adiciona-los um status
+> agora eu quero tirar o botao de excluir de cada bloco de projeto
+> quero que ao clicar em cada projeto abra um modal contendo as informações de detalhadas de cada projeto
+> Neste modal, alem dos detalhes tambem deve ter um botão de excluir e um select que me permita modificar o status do projeto
+> remova o select restaurar dados de exemplo
+> na pagina inicial, junto ao filtro de status crie filtros de data,  municipio cadastrado nos projeto, por valor do orçamento e por equipe
+> ao terminal as modificações faça o commit e push para o github
+
+### O que o assistente executou
+
+**Regras de negócio** (`public/js/projetos.js` e `public/js/repositorio.js`)
+- `filtrarProjetos()` combina os filtros de status, intervalo de prazo, município, equipe e faixa de orçamento. Filtros vazios são ignorados; valores inválidos lançam `RangeError`.
+- `opcoesDeFiltro()` devolve os municípios e as equipes distintos, em ordem alfabética.
+- `repositorio.atualizarStatus(id, status)` valida o status, grava no localStorage e devolve `null` se o id não existir.
+
+**Interface**
+- O botão **Excluir foi removido dos cartões**. O título de cada cartão virou um botão, e o CSS estende a área clicável ao cartão inteiro. Isso permite abrir os detalhes com o mouse e com o teclado (Enter), e o foco volta ao cartão quando o modal fecha.
+- Novo **modal de detalhes**:
+  - mostra município, equipe, status, prazo, orçamento, progresso e código;
+  - tem o **select "Alterar status"**, que grava na hora e atualiza a lista e o resumo;
+  - tem o botão **"Excluir projeto"**, que pede confirmação no modal já existente;
+  - fecha com o botão Fechar, com Esc ou com clique fora.
+- O botão **"Restaurar dados de exemplo" foi removido**. A função de restauração continua no repositório, usada para carregar os dados na primeira visita.
+- Novos **filtros** junto ao de status: Município, Equipe (select alimentado pelos projetos cadastrados), Prazo de/até, Orçamento mín./máx. e o botão "Limpar filtros". Um filtro inválido mostra a mensagem "Filtro inválido".
+- CSS: barra de filtros responsiva (2 colunas no celular), cartão com destaque ao passar o mouse e no foco, e estilos do modal de detalhes. As regras da barra antiga foram removidas.
+- A paleta foi mantida: texto preto ou branco, Excluir avermelhado, selos na cor do status.
+
+**Testes**
+- Node: 21 testes novos (filtros, opções e alteração de status), totalizando **93/93**.
+- Playwright: testes reescritos e novos, totalizando **42/42** (21 cenários × desktop e mobile). Eles cobrem:
+  - ausência do Excluir nos cartões e do botão de restaurar;
+  - abertura dos detalhes por clique no cartão e por teclado;
+  - alteração de status que persiste depois de recarregar;
+  - exclusão com confirmação; cancelamento;
+  - Esc e clique fora fechando só o modal de cima;
+  - filtros de município, equipe, prazo, orçamento, combinação, limpar, opções de um projeto novo e filtro inválido;
+  - paleta, verificada com os dois modais abertos;
+  - XSS também no título do modal.
+- A primeira execução teve 2 falhas no teste de clique no cartão: a camada clicável cobria o texto, e o Playwright recusou clicar nele. O teste passou a clicar no próprio cartão.
+- `npm audit`: 0 vulnerabilidades. As capturas de tela (desktop e mobile) foram revisadas pelo assistente.
+- `README.md`: funcionalidades atualizadas.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `public/index.html` | Modificado (filtros, modal de detalhes, sem botão de restaurar) |
+| `public/js/app.js` | Modificado (cartão clicável, detalhes, status, filtros) |
+| `public/js/projetos.js` | Modificado (`filtrarProjetos`, `opcoesDeFiltro`) |
+| `public/js/repositorio.js` | Modificado (`atualizarStatus`) |
+| `public/styles.css` | Modificado |
+| `test/projetos.test.js`, `test/repositorio.test.js` | Modificados |
+| `e2e/app.spec.js` | Modificado |
+| `README.md` | Modificado |
+| `.gitignore` | Modificado (`entrega/`, da iteração 33) |
+| `docs/RELATORIO_GOVERNANCA.md` | Modificado (iterações 33 e 34) |
+
+### Aprovações do humano
+
+- Pediu as mudanças e **autorizou, no próprio pedido, o commit e o push** ao final.

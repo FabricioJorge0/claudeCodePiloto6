@@ -1,6 +1,6 @@
 // Interface (DOM). Usa textContent (nunca innerHTML com dados) para evitar XSS.
 
-import { ROTULOS_STATUS, listarProjetos, resumoPorStatus } from './projetos.js';
+import { ROTULOS_STATUS, STATUS_VALIDOS, filtrarProjetos, opcoesDeFiltro, resumoPorStatus } from './projetos.js';
 import { ErroValidacao, criarRepositorio } from './repositorio.js';
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -45,13 +45,8 @@ function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar', excluir = f
     const fechar = (resultado) => () => modal.close(resultado);
     const aoConfirmar = fechar('confirmar');
     const aoCancelar = fechar('cancelar');
-    // Clique no fundo escurecido (fora da caixa do modal) cancela
     const aoClicarFora = (evento) => {
-      if (evento.target !== modal) return;
-      const caixa = modal.getBoundingClientRect();
-      const dentro = evento.clientX >= caixa.left && evento.clientX <= caixa.right
-        && evento.clientY >= caixa.top && evento.clientY <= caixa.bottom;
-      if (!dentro) modal.close('cancelar');
+      if (cliqueForaDaCaixa(modal, evento)) modal.close('cancelar');
     };
 
     botaoConfirmar.addEventListener('click', aoConfirmar);
@@ -88,8 +83,16 @@ function renderizarResumo(projetos) {
   );
 }
 
-function renderizarProjeto(p) {
-  const progresso = Math.max(0, Math.min(100, Number(p.progresso) || 0));
+function formatarPrazo(prazo) {
+  return data.format(new Date(`${prazo}T00:00:00Z`));
+}
+
+function limitarProgresso(valor) {
+  return Math.max(0, Math.min(100, Number(valor) || 0));
+}
+
+function criarBarraProgresso(p) {
+  const progresso = limitarProgresso(p.progresso);
   const barra = el('div', { className: 'progresso' }, [el('span')]);
   barra.firstChild.style.width = `${progresso}%`;
   barra.setAttribute('role', 'progressbar');
@@ -97,60 +100,202 @@ function renderizarProjeto(p) {
   barra.setAttribute('aria-valuemin', '0');
   barra.setAttribute('aria-valuemax', '100');
   barra.setAttribute('aria-label', `Progresso de ${p.nome}`);
+  return barra;
+}
 
-  const campos = [
+function criarSelo(status) {
+  return el('span', { className: `selo selo-${status}`, textContent: ROTULOS_STATUS[status] ?? status });
+}
+
+function listaDeCampos(campos) {
+  return campos.flatMap(([dt, dd]) => [el('dt', { textContent: dt }), el('dd', { textContent: dd })]);
+}
+
+// Fecha o modal ao clicar no fundo escurecido (fora da caixa)
+function cliqueForaDaCaixa(modal, evento) {
+  if (evento.target !== modal) return false;
+  const caixa = modal.getBoundingClientRect();
+  return evento.clientX < caixa.left || evento.clientX > caixa.right
+    || evento.clientY < caixa.top || evento.clientY > caixa.bottom;
+}
+
+// ---------------------------------------------------------------- Detalhes
+
+let idEmDetalhe = null;
+
+function renderizarDetalhes(p) {
+  const progresso = limitarProgresso(p.progresso);
+  document.getElementById('detalhes-titulo').textContent = p.nome;
+  document.getElementById('detalhes-selo').replaceWith(
+    Object.assign(criarSelo(p.status), { id: 'detalhes-selo' })
+  );
+  document.getElementById('detalhes-campos').replaceChildren(...listaDeCampos([
     ['Município', p.municipio],
-    ['Responsável', p.responsavel],
-    ['Prazo', data.format(new Date(`${p.prazo}T00:00:00Z`))],
+    ['Equipe responsável', p.responsavel],
+    ['Status', ROTULOS_STATUS[p.status] ?? p.status],
+    ['Prazo', formatarPrazo(p.prazo)],
     ['Orçamento', moeda.format(p.orcamento)],
-    ['Progresso', `${progresso}%`]
-  ];
+    ['Progresso', `${progresso}%`],
+    ['Código', `#${p.id}`]
+  ]));
+  document.getElementById('detalhes-status').value = p.status;
+}
 
-  const excluir = el('button', { type: 'button', className: 'botao-excluir', textContent: 'Excluir' });
-  excluir.setAttribute('aria-label', `Excluir ${p.nome}`);
-  excluir.addEventListener('click', async () => {
+function abrirDetalhes(id) {
+  const projeto = repositorio.buscar(id);
+  if (!projeto) return;
+  idEmDetalhe = projeto.id;
+  renderizarDetalhes(projeto);
+  document.getElementById('detalhes-mensagem').textContent = '';
+  document.getElementById('modal-detalhes').showModal();
+  document.getElementById('detalhes-fechar').focus();
+}
+
+function configurarDetalhes() {
+  const modal = document.getElementById('modal-detalhes');
+  const seletor = document.getElementById('detalhes-status');
+  const mensagem = document.getElementById('detalhes-mensagem');
+
+  seletor.replaceChildren(
+    ...STATUS_VALIDOS.map((s) => el('option', { value: s, textContent: ROTULOS_STATUS[s] }))
+  );
+
+  seletor.addEventListener('change', () => {
+    try {
+      const atualizado = repositorio.atualizarStatus(idEmDetalhe, seletor.value);
+      if (!atualizado) {
+        modal.close();
+        atualizar();
+        return;
+      }
+      renderizarDetalhes(atualizado);
+      mensagem.textContent = `Status alterado para "${ROTULOS_STATUS[atualizado.status]}".`;
+      atualizar();
+    } catch (erro) {
+      mensagem.textContent = 'Não foi possível alterar o status.';
+      console.error(erro);
+    }
+  });
+
+  document.getElementById('detalhes-excluir').addEventListener('click', async () => {
+    const projeto = repositorio.buscar(idEmDetalhe);
+    if (!projeto) return;
     const confirmado = await confirmar({
       titulo: 'Excluir projeto',
-      mensagem: `Excluir o projeto "${p.nome}"? Esta ação não pode ser desfeita.`,
+      mensagem: `Excluir o projeto "${projeto.nome}"? Esta ação não pode ser desfeita.`,
       textoConfirmar: 'Excluir',
       excluir: true
     });
     if (confirmado) {
-      repositorio.remover(p.id);
+      repositorio.remover(projeto.id);
+      modal.close();
       atualizar();
     }
   });
 
+  document.getElementById('detalhes-fechar').addEventListener('click', () => modal.close());
+  modal.addEventListener('click', (evento) => {
+    if (cliqueForaDaCaixa(modal, evento)) modal.close();
+  });
+  modal.addEventListener('close', () => {
+    idEmDetalhe = null;
+  });
+}
+
+// ---------------------------------------------------------------- Lista
+
+// O título do cartão é um botão; o CSS estende a área clicável a todo o cartão
+function renderizarProjeto(p) {
+  const abrir = el('button', { type: 'button', className: 'projeto-abrir', textContent: p.nome });
+  abrir.setAttribute('aria-haspopup', 'dialog');
+  abrir.addEventListener('click', () => abrirDetalhes(p.id));
+
   const item = el('li', { className: 'projeto' }, [
-    el('span', { className: `selo selo-${p.status}`, textContent: ROTULOS_STATUS[p.status] ?? p.status }),
-    el('h3', { textContent: p.nome }),
-    el('dl', {}, campos.flatMap(([dt, dd]) => [el('dt', { textContent: dt }), el('dd', { textContent: dd })])),
-    barra,
-    excluir
+    criarSelo(p.status),
+    el('h3', {}, [abrir]),
+    el('dl', {}, listaDeCampos([
+      ['Município', p.municipio],
+      ['Responsável', p.responsavel],
+      ['Prazo', formatarPrazo(p.prazo)],
+      ['Orçamento', moeda.format(p.orcamento)],
+      ['Progresso', `${limitarProgresso(p.progresso)}%`]
+    ])),
+    criarBarraProgresso(p)
   ]);
   item.dataset.testid = 'projeto';
   item.dataset.status = p.status;
   return item;
 }
 
+// ---------------------------------------------------------------- Filtros
+
+function lerFiltros() {
+  const valor = (id) => document.getElementById(id).value;
+  return {
+    status: valor('filtro-status'),
+    municipio: valor('filtro-municipio'),
+    responsavel: valor('filtro-equipe'),
+    prazoDe: valor('filtro-prazo-de'),
+    prazoAte: valor('filtro-prazo-ate'),
+    orcamentoMin: valor('filtro-orcamento-min'),
+    orcamentoMax: valor('filtro-orcamento-max')
+  };
+}
+
+// Recria as opções a partir dos projetos cadastrados, mantendo a seleção se ela ainda existir
+function preencherOpcoes(id, valores, rotuloTodos) {
+  const seletor = document.getElementById(id);
+  const atual = seletor.value;
+  seletor.replaceChildren(
+    el('option', { value: '', textContent: rotuloTodos }),
+    ...valores.map((v) => el('option', { value: v, textContent: v }))
+  );
+  seletor.value = valores.includes(atual) ? atual : '';
+}
+
 function atualizar() {
   const mensagem = document.getElementById('mensagem');
   const lista = document.getElementById('lista-projetos');
-  const status = document.getElementById('filtro-status').value;
+  let todos;
   try {
-    const todos = repositorio.listar();
-    renderizarResumo(todos);
-    const projetos = listarProjetos(todos, { status });
+    todos = repositorio.listar();
+  } catch (erro) {
+    lista.replaceChildren();
+    mensagem.textContent = 'Não foi possível carregar os projetos.';
+    console.error(erro);
+    return;
+  }
+
+  renderizarResumo(todos);
+  const { municipios, equipes } = opcoesDeFiltro(todos);
+  preencherOpcoes('filtro-municipio', municipios, 'Todos');
+  preencherOpcoes('filtro-equipe', equipes, 'Todas');
+
+  try {
+    const projetos = filtrarProjetos(todos, lerFiltros());
     lista.replaceChildren(...projetos.map(renderizarProjeto));
     mensagem.textContent = projetos.length === 0
       ? 'Nenhum projeto encontrado.'
       : `${projetos.length} projeto(s) exibido(s).`;
   } catch (erro) {
+    if (!(erro instanceof RangeError)) throw erro;
     lista.replaceChildren();
-    mensagem.textContent = 'Não foi possível carregar os projetos.';
-    console.error(erro);
+    mensagem.textContent = `Filtro inválido: ${erro.message}.`;
   }
 }
+
+function configurarFiltros() {
+  const form = document.getElementById('filtros');
+  form.addEventListener('input', atualizar);
+  form.addEventListener('change', atualizar);
+  form.addEventListener('submit', (evento) => evento.preventDefault());
+  document.getElementById('limpar-filtros').addEventListener('click', () => {
+    form.reset();
+    atualizar();
+  });
+}
+
+// ---------------------------------------------------------------- Cadastro
 
 function configurarFormulario() {
   const form = document.getElementById('form-projeto');
@@ -179,18 +324,8 @@ function configurarFormulario() {
 }
 
 function iniciar() {
-  document.getElementById('filtro-status').addEventListener('change', atualizar);
-  document.getElementById('restaurar').addEventListener('click', async () => {
-    const confirmado = await confirmar({
-      titulo: 'Restaurar dados de exemplo',
-      mensagem: 'Substituir todos os projetos pelos dados fictícios de exemplo? Os projetos cadastrados serão perdidos.',
-      textoConfirmar: 'Restaurar'
-    });
-    if (confirmado) {
-      repositorio.restaurar();
-      atualizar();
-    }
-  });
+  configurarFiltros();
+  configurarDetalhes();
   configurarFormulario();
   atualizar();
 }

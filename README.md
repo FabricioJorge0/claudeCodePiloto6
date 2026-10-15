@@ -34,7 +34,13 @@ Segurança do workflow: permissão apenas de leitura (`contents: read`), checkou
 
 **Não há banco de dados.** Os projetos ficam no `localStorage` do navegador (chave `gpa:projetos:v1`). Na primeira visita, os dados fictícios de exemplo são carregados automaticamente. O servidor Node apenas entrega os arquivos estáticos.
 
-Funcionalidades: resumo por status, filtro, cadastro de projeto com validação, exclusão e restauração dos dados de exemplo.
+Funcionalidades:
+
+- **Resumo** por status e orçamento total.
+- **Cadastro** de projeto com validação.
+- **Filtros** combináveis: status, município, equipe, intervalo de prazo e faixa de orçamento. As opções de município e equipe vêm dos projetos cadastrados. O botão "Limpar filtros" restaura a lista completa.
+- **Detalhes em modal:** clicar em qualquer ponto do cartão de um projeto (ou focar o título e apertar Enter) abre um modal com todas as informações. Nele é possível **alterar o status**, que é salvo na hora, e **excluir o projeto**, com confirmação.
+- Os cartões da lista não têm botão de exclusão, e não existe mais o botão de restaurar os dados de exemplo. Os dados de exemplo são carregados só na primeira visita.
 
 **Paleta visual:** branco predominante e verde como cor de apoio (faixa do topo, bordas, barras de progresso, painel do formulário). O texto é sempre preto, ou branco sobre o verde. As exceções são os selos de status (cada um na sua cor), os botões **Excluir** (texto avermelhado) e **Salvar projeto** (texto verde). A regra é verificada por um teste E2E.
 

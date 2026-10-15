@@ -44,26 +44,61 @@
     </section>
 
     <section aria-labelledby="titulo-projetos">
-      <div class="barra">
-        <h2 id="titulo-projetos">Projetos</h2>
-        <div class="acoes">
-          <label class="filtro">
-            Status
-            <select id="filtro-status" data-testid="filtro-status">
-              <option value="">Todos</option>
-              <option value="planejamento">Planejamento</option>
-              <option value="em_execucao">Em execução</option>
-              <option value="atrasado">Atrasado</option>
-              <option value="concluido">Concluído</option>
-            </select>
-          </label>
-          <button type="button" id="restaurar" class="botao-secundario">Restaurar dados de exemplo</button>
-        </div>
-      </div>
+      <h2 id="titulo-projetos">Projetos</h2>
+      <form id="filtros" class="filtros" data-testid="filtros" role="search" aria-label="Filtros de projetos" novalidate>
+        <label>Status
+          <select id="filtro-status" data-testid="filtro-status">
+            <option value="">Todos</option>
+            <option value="planejamento">Planejamento</option>
+            <option value="em_execucao">Em execução</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="concluido">Concluído</option>
+          </select>
+        </label>
+        <label>Município
+          <select id="filtro-municipio" data-testid="filtro-municipio">
+            <option value="">Todos</option>
+          </select>
+        </label>
+        <label>Equipe
+          <select id="filtro-equipe" data-testid="filtro-equipe">
+            <option value="">Todas</option>
+          </select>
+        </label>
+        <label>Prazo de
+          <input id="filtro-prazo-de" data-testid="filtro-prazo-de" type="date">
+        </label>
+        <label>Prazo até
+          <input id="filtro-prazo-ate" data-testid="filtro-prazo-ate" type="date">
+        </label>
+        <label>Orçamento mín. (R$)
+          <input id="filtro-orcamento-min" data-testid="filtro-orcamento-min" type="number" min="0" step="0.01" inputmode="decimal">
+        </label>
+        <label>Orçamento máx. (R$)
+          <input id="filtro-orcamento-max" data-testid="filtro-orcamento-max" type="number" min="0" step="0.01" inputmode="decimal">
+        </label>
+        <button type="button" id="limpar-filtros" class="botao-secundario">Limpar filtros</button>
+      </form>
       <p id="mensagem" class="mensagem" role="status" aria-live="polite"></p>
       <ul id="lista-projetos" class="lista" data-testid="lista-projetos"></ul>
     </section>
   </main>
+
+  <dialog id="modal-detalhes" class="modal" data-testid="modal-detalhes" aria-labelledby="detalhes-titulo">
+    <h2 id="detalhes-titulo"></h2>
+    <div class="modal-corpo">
+      <span id="detalhes-selo" class="selo"></span>
+      <dl id="detalhes-campos" class="detalhes" data-testid="detalhes-campos"></dl>
+      <label class="campo-status">Alterar status
+        <select id="detalhes-status" data-testid="detalhes-status"></select>
+      </label>
+      <p id="detalhes-mensagem" class="mensagem" role="status" aria-live="polite"></p>
+    </div>
+    <div class="modal-acoes">
+      <button type="button" id="detalhes-excluir" class="botao-excluir">Excluir projeto</button>
+      <button type="button" id="detalhes-fechar" class="botao-secundario">Fechar</button>
+    </div>
+  </dialog>
 
   <dialog id="modal-confirmacao" class="modal" data-testid="modal-confirmacao"
           aria-labelledby="modal-titulo" aria-describedby="modal-mensagem">

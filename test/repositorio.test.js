@@ -146,4 +146,28 @@ describe('repositório (localStorage)', () => {
     a.adicionar(novoProjeto);
     assert.equal(b.listar().length, 0);
   });
+
+  test('atualizarStatus grava o novo status e persiste entre instâncias', () => {
+    const armazenamento = criarArmazenamentoFalso();
+    const atualizado = criarRepositorio(armazenamento).atualizarStatus(2, 'concluido');
+    assert.equal(atualizado.status, 'concluido');
+    assert.equal(criarRepositorio(armazenamento).buscar(2).status, 'concluido');
+  });
+
+  test('atualizarStatus não altera os demais campos', () => {
+    const repo = criarRepositorio(criarArmazenamentoFalso());
+    const atualizado = repo.atualizarStatus(1, 'atrasado');
+    assert.deepEqual(atualizado, { ...dadosExemplo[0], status: 'atrasado' });
+  });
+
+  test('atualizarStatus com status inválido lança ErroValidacao e não grava', () => {
+    const repo = criarRepositorio(criarArmazenamentoFalso());
+    assert.throws(() => repo.atualizarStatus(1, '<script>'), ErroValidacao);
+    assert.equal(repo.buscar(1).status, dadosExemplo[0].status);
+  });
+
+  test('atualizarStatus de id inexistente retorna null', () => {
+    const repo = criarRepositorio(criarArmazenamentoFalso());
+    assert.equal(repo.atualizarStatus(999, 'concluido'), null);
+  });
 });

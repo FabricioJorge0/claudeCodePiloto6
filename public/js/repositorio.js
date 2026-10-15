@@ -3,7 +3,7 @@
 // nos testes, um objeto falso com a mesma interface.
 
 import { dadosExemplo } from './dados-exemplo.js';
-import { buscarProjeto, normalizarProjeto, proximoId, validarProjeto } from './projetos.js';
+import { buscarProjeto, normalizarProjeto, proximoId, statusValido, validarProjeto } from './projetos.js';
 
 export const CHAVE_PADRAO = 'gpa:projetos:v1';
 
@@ -73,6 +73,17 @@ export function criarRepositorio(armazenamento, { chave = CHAVE_PADRAO, exemplo 
       projetos.push(novo);
       gravar(projetos);
       return copia(novo);
+    },
+
+    // Retorna o projeto atualizado, ou null se o id não existir
+    atualizarStatus(id, status) {
+      if (!statusValido(status)) throw new ErroValidacao(['Status inválido']);
+      const projetos = ler();
+      const projeto = buscarProjeto(projetos, id);
+      if (!projeto) return null;
+      projeto.status = status;
+      gravar(projetos);
+      return copia(projeto);
     },
 
     remover(id) {

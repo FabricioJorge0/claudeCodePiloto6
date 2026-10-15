@@ -5,8 +5,10 @@ import { dadosExemplo } from '../public/js/dados-exemplo.js';
 import {
   STATUS_VALIDOS,
   buscarProjeto,
+  filtrarProjetos,
   listarProjetos,
   normalizarProjeto,
+  opcoesDeFiltro,
   proximoId,
   resumoPorStatus,
   validarProjeto
@@ -170,5 +172,93 @@ describe('resumoPorStatus', () => {
     assert.equal(resumo.orcamentoTotal, 0);
     assert.deepEqual(Object.keys(resumo.porStatus), STATUS_VALIDOS);
     assert.ok(Object.values(resumo.porStatus).every((n) => n === 0));
+  });
+});
+
+describe('filtrarProjetos', () => {
+  const ids = (lista) => lista.map((p) => p.id).sort((a, b) => a - b);
+
+  test('sem filtros retorna todos (em nova lista)', () => {
+    const lista = filtrarProjetos(dadosExemplo);
+    assert.equal(lista.length, dadosExemplo.length);
+    assert.notEqual(lista, dadosExemplo);
+  });
+
+  test('filtros vazios ou só com espaços são ignorados', () => {
+    const vazios = { status: '', prazoDe: '', prazoAte: null, municipio: '  ', responsavel: undefined, orcamentoMin: '', orcamentoMax: '' };
+    assert.equal(filtrarProjetos(dadosExemplo, vazios).length, dadosExemplo.length);
+  });
+
+  test('por status', () => {
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { status: 'planejamento' })), [2, 6]);
+  });
+
+  test('por município (correspondência exata)', () => {
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { municipio: 'Vale Verde (fictício)' })), [1, 4]);
+    assert.deepEqual(filtrarProjetos(dadosExemplo, { municipio: 'Vale' }), []);
+  });
+
+  test('por equipe responsável', () => {
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { responsavel: 'Equipe Gama' })), [3]);
+  });
+
+  test('por intervalo de prazo (inclusivo)', () => {
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { prazoDe: '2027-01-01' })), [1, 2, 5, 6]);
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { prazoAte: '2026-12-31' })), [3, 4]);
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { prazoDe: '2027-03-31', prazoAte: '2027-05-20' })), [1, 6]);
+  });
+
+  test('intervalo de prazo invertido não retorna nada', () => {
+    assert.deepEqual(filtrarProjetos(dadosExemplo, { prazoDe: '2027-12-31', prazoAte: '2026-01-01' }), []);
+  });
+
+  test('por faixa de orçamento (inclusiva, aceita texto do formulário)', () => {
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { orcamentoMin: '150000' })), [1, 3, 5]);
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { orcamentoMax: 45000 })), [4, 6]);
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { orcamentoMin: '80000', orcamentoMax: '210000' })), [1, 2, 5]);
+  });
+
+  test('combina todos os filtros', () => {
+    const resultado = filtrarProjetos(dadosExemplo, {
+      status: 'em_execucao',
+      municipio: 'Vale Verde (fictício)',
+      responsavel: 'Equipe Alfa',
+      prazoDe: '2027-01-01',
+      prazoAte: '2027-12-31',
+      orcamentoMin: '100000',
+      orcamentoMax: '200000'
+    });
+    assert.deepEqual(ids(resultado), [1]);
+  });
+
+  const invalidos = [
+    ['status desconhecido', { status: 'cancelado' }],
+    ['prazo inicial em formato errado', { prazoDe: '31/12/2026' }],
+    ['prazo final inexistente', { prazoAte: '2027-02-30' }],
+    ['orçamento mínimo negativo', { orcamentoMin: '-1' }],
+    ['orçamento máximo não numérico', { orcamentoMax: 'abc' }],
+    ['orçamento infinito', { orcamentoMin: Infinity }]
+  ];
+  for (const [descricao, filtros] of invalidos) {
+    test(`rejeita ${descricao} com RangeError`, () => {
+      assert.throws(() => filtrarProjetos(dadosExemplo, filtros), RangeError);
+    });
+  }
+});
+
+describe('opcoesDeFiltro', () => {
+  test('lista municípios e equipes distintos em ordem alfabética', () => {
+    const { municipios, equipes } = opcoesDeFiltro(dadosExemplo);
+    assert.deepEqual(municipios, [
+      'Campo Largo do Sul (fictício)',
+      'Porto Sereno (fictício)',
+      'Serra Azul (fictício)',
+      'Vale Verde (fictício)'
+    ]);
+    assert.deepEqual(equipes, ['Equipe Alfa', 'Equipe Beta', 'Equipe Delta', 'Equipe Épsilon', 'Equipe Gama', 'Equipe Zeta']);
+  });
+
+  test('lista vazia gera opções vazias', () => {
+    assert.deepEqual(opcoesDeFiltro([]), { municipios: [], equipes: [] });
   });
 });

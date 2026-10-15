@@ -34,8 +34,27 @@ const projetoNovo = {
   progresso: '20'
 };
 
-function modal(page) {
-  return page.getByRole('dialog');
+function modalDetalhes(page) {
+  return page.getByTestId('modal-detalhes');
+}
+
+function modalConfirmacao(page) {
+  return page.getByTestId('modal-confirmacao');
+}
+
+function cartao(page, nome) {
+  return page.getByTestId('projeto').filter({ hasText: nome });
+}
+
+async function abrirDetalhes(page, nome) {
+  await page.getByRole('button', { name: nome }).click();
+  await expect(modalDetalhes(page)).toBeVisible();
+}
+
+async function filtrar(page, testid, valor) {
+  const campo = page.getByTestId(testid);
+  if ((await campo.evaluate((e) => e.tagName)) === 'SELECT') await campo.selectOption(valor);
+  else await campo.fill(valor);
 }
 
 let errosNoConsole;
@@ -126,64 +145,190 @@ test('exibe HTML digitado como texto, sem executá-lo (XSS)', async ({ page }) =
 
   await expect(page.getByRole('heading', { name: nomeMalicioso })).toBeVisible();
   await expect(page.getByTestId('lista-projetos').locator('img')).toHaveCount(0);
+
+  await abrirDetalhes(page, nomeMalicioso);
+  await expect(modalDetalhes(page).getByRole('heading', { name: nomeMalicioso })).toBeVisible();
+  await expect(modalDetalhes(page).locator('img')).toHaveCount(0);
 });
 
-test('exclui projeto pelo modal e restaura os dados de exemplo', async ({ page }) => {
-  await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
-  await expect(modal(page)).toBeVisible();
-  await expect(modal(page)).toContainText('Excluir projeto');
-  await expect(modal(page)).toContainText('Coleta Seletiva nas Escolas Modelo');
-  await modal(page).getByRole('button', { name: 'Excluir' }).click();
-  await expect(modal(page)).toBeHidden();
+test('cartões não têm botão Excluir e não há botão de restaurar', async ({ page }) => {
+  await expect(page.getByTestId('lista-projetos').getByRole('button', { name: /Excluir/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Restaurar dados de exemplo' })).toHaveCount(0);
+});
+
+test('clicar no cartão abre o modal com os detalhes completos', async ({ page }) => {
+  // Clique perto do rodapé do cartão (longe do título): o cartão inteiro é clicável
+  const alvo = cartao(page, 'Corredor Ecológico Mata Exemplo');
+  const caixa = await alvo.boundingBox();
+  await alvo.click({ position: { x: caixa.width / 2, y: caixa.height - 12 } });
+  const detalhes = modalDetalhes(page);
+  await expect(detalhes).toBeVisible();
+  await expect(detalhes.getByRole('heading', { name: 'Corredor Ecológico Mata Exemplo' })).toBeVisible();
+  const campos = detalhes.getByTestId('detalhes-campos');
+  for (const texto of ['Campo Largo do Sul (fictício)', 'Equipe Gama', 'Atrasado', '30/06/2026', 'R$ 320.000,00', '60%', '#3']) {
+    await expect(campos).toContainText(texto);
+  }
+  await expect(detalhes.getByTestId('detalhes-status')).toHaveValue('atrasado');
+  await expect(detalhes.getByRole('button', { name: 'Excluir projeto' })).toBeVisible();
+
+  await detalhes.getByRole('button', { name: 'Fechar' }).click();
+  await expect(detalhes).toBeHidden();
+});
+
+test('detalhes abrem pelo teclado e o foco volta ao cartão ao fechar', async ({ page }) => {
+  const titulo = page.getByRole('button', { name: 'Coleta Seletiva nas Escolas Modelo' });
+  await titulo.focus();
+  await page.keyboard.press('Enter');
+  await expect(modalDetalhes(page)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(modalDetalhes(page)).toBeHidden();
+  await expect(titulo).toBeFocused();
+});
+
+test('altera o status no modal e mantém após recarregar', async ({ page }) => {
+  await abrirDetalhes(page, 'Monitoramento da Qualidade do Ar');
+  const detalhes = modalDetalhes(page);
+  await detalhes.getByTestId('detalhes-status').selectOption('concluido');
+  await expect(detalhes.getByRole('status')).toHaveText('Status alterado para "Concluído".');
+  await expect(detalhes.locator('.selo')).toHaveText('Concluído');
+  await expect(detalhes.getByTestId('detalhes-campos')).toContainText('Concluído');
+
+  // A lista e o resumo atualizam por trás do modal
+  await expect(cartao(page, 'Monitoramento da Qualidade do Ar')).toHaveAttribute('data-status', 'concluido');
+  await expect(valorResumo(page, 'Concluído')).toHaveText('2');
+  await expect(valorResumo(page, 'Planejamento')).toHaveText('1');
+
+  await detalhes.getByRole('button', { name: 'Fechar' }).click();
+  await page.reload();
+  await expect(cartao(page, 'Monitoramento da Qualidade do Ar')).toHaveAttribute('data-status', 'concluido');
+  await abrirDetalhes(page, 'Monitoramento da Qualidade do Ar');
+  await expect(modalDetalhes(page).getByTestId('detalhes-status')).toHaveValue('concluido');
+});
+
+test('exclui projeto pelo modal de detalhes, com confirmação', async ({ page }) => {
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' }).click();
+
+  const confirmacao = modalConfirmacao(page);
+  await expect(confirmacao).toBeVisible();
+  await expect(confirmacao).toContainText('Excluir projeto');
+  await expect(confirmacao).toContainText('Coleta Seletiva nas Escolas Modelo');
+  await confirmacao.getByRole('button', { name: 'Excluir' }).click();
+
+  await expect(confirmacao).toBeHidden();
+  await expect(modalDetalhes(page)).toBeHidden();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO - 1);
   await expect(page.getByTestId('lista-projetos')).not.toContainText('Coleta Seletiva');
 
   await page.reload();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO - 1);
+});
 
-  await page.getByRole('button', { name: 'Restaurar dados de exemplo' }).click();
-  await expect(modal(page)).toContainText('Restaurar dados de exemplo');
-  await modal(page).getByRole('button', { name: 'Restaurar' }).click();
-  await expect(modal(page)).toBeHidden();
+test('cancelar a exclusão mantém o projeto e o modal de detalhes aberto', async ({ page }) => {
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' }).click();
+  const confirmacao = modalConfirmacao(page);
+  await expect(confirmacao.getByRole('button', { name: 'Cancelar' })).toBeFocused();
+
+  await confirmacao.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(confirmacao).toBeHidden();
+  await expect(modalDetalhes(page)).toBeVisible();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+});
+
+test('Esc e clique fora fecham só o modal de cima', async ({ page }) => {
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  const excluir = modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' });
+
+  await excluir.click();
+  await page.keyboard.press('Escape');
+  await expect(modalConfirmacao(page)).toBeHidden();
+  await expect(modalDetalhes(page)).toBeVisible();
+
+  await excluir.click();
+  await page.mouse.click(5, 5); // fundo escurecido
+  await expect(modalConfirmacao(page)).toBeHidden();
+  await expect(modalDetalhes(page)).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(modalDetalhes(page)).toBeHidden();
+
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await page.mouse.click(5, 5);
+  await expect(modalDetalhes(page)).toBeHidden();
+
+  await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+});
+
+test('clicar dentro da caixa dos modais não fecha', async ({ page }) => {
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await modalDetalhes(page).getByTestId('detalhes-campos').click();
+  await expect(modalDetalhes(page)).toBeVisible();
+
+  await modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' }).click();
+  await modalConfirmacao(page).locator('#modal-mensagem').click();
+  await expect(modalConfirmacao(page)).toBeVisible();
+  await modalConfirmacao(page).getByRole('button', { name: 'Cancelar' }).click();
+});
+
+test('filtra por município e equipe com opções dos projetos cadastrados', async ({ page }) => {
+  const municipio = page.getByTestId('filtro-municipio');
+  await expect(municipio.locator('option')).toHaveText([
+    'Todos', 'Campo Largo do Sul (fictício)', 'Porto Sereno (fictício)', 'Serra Azul (fictício)', 'Vale Verde (fictício)'
+  ]);
+  await expect(page.getByTestId('filtro-equipe').locator('option')).toHaveCount(7);
+
+  await filtrar(page, 'filtro-municipio', 'Vale Verde (fictício)');
+  await expect(page.getByTestId('projeto')).toHaveCount(2);
+  await filtrar(page, 'filtro-equipe', 'Equipe Delta');
+  await expect(page.getByTestId('projeto')).toHaveCount(1);
   await expect(page.getByTestId('lista-projetos')).toContainText('Coleta Seletiva');
 });
 
-test('modal abre com foco em Cancelar e cancelar não exclui', async ({ page }) => {
-  await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
-  await expect(modal(page)).toBeVisible();
-  await expect(modal(page).getByRole('button', { name: 'Cancelar' })).toBeFocused();
+test('filtra por intervalo de prazo', async ({ page }) => {
+  await filtrar(page, 'filtro-prazo-de', '2027-01-01');
+  await expect(page.getByTestId('projeto')).toHaveCount(4);
+  await filtrar(page, 'filtro-prazo-ate', '2027-05-31');
+  await expect(page.getByTestId('projeto')).toHaveCount(2);
 
-  await modal(page).getByRole('button', { name: 'Cancelar' }).click();
-  await expect(modal(page)).toBeHidden();
-  await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+  await filtrar(page, 'filtro-prazo-ate', '2026-01-01');
+  await expect(page.getByTestId('projeto')).toHaveCount(0);
+  await expect(page.locator('#mensagem')).toHaveText('Nenhum projeto encontrado.');
 });
 
-test('Esc e clique fora do modal cancelam a ação', async ({ page }) => {
-  const excluir = page.getByRole('button', { name: /^Excluir Coleta Seletiva/ });
+test('filtra por faixa de orçamento', async ({ page }) => {
+  await filtrar(page, 'filtro-orcamento-min', '100000');
+  await expect(page.getByTestId('projeto')).toHaveCount(3);
+  await filtrar(page, 'filtro-orcamento-max', '200000');
+  await expect(page.getByTestId('projeto')).toHaveCount(1);
+  await expect(page.getByTestId('lista-projetos')).toContainText('Recuperação de Nascentes');
 
-  await excluir.click();
-  await expect(modal(page)).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(modal(page)).toBeHidden();
-
-  await excluir.click();
-  await expect(modal(page)).toBeVisible();
-  await page.mouse.click(5, 5); // fundo escurecido, fora da caixa
-  await expect(modal(page)).toBeHidden();
-
-  await page.getByRole('button', { name: 'Restaurar dados de exemplo' }).click();
-  await page.keyboard.press('Escape');
-  await expect(modal(page)).toBeHidden();
-
-  await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+  await filtrar(page, 'filtro-orcamento-min', '-5');
+  await expect(page.getByTestId('projeto')).toHaveCount(0);
+  await expect(page.locator('#mensagem')).toContainText('Filtro inválido');
 });
 
-test('clicar dentro da caixa do modal não cancela', async ({ page }) => {
-  await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
-  await modal(page).locator('#modal-mensagem').click();
-  await expect(modal(page)).toBeVisible();
-  await modal(page).getByRole('button', { name: 'Cancelar' }).click();
+test('combina filtros e limpa todos', async ({ page }) => {
+  await filtrar(page, 'filtro-status', 'em_execucao');
+  await filtrar(page, 'filtro-municipio', 'Porto Sereno (fictício)');
+  await expect(page.getByTestId('projeto')).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO);
+  await expect(page.getByTestId('filtro-status')).toHaveValue('');
+  await expect(page.getByTestId('filtro-municipio')).toHaveValue('');
+});
+
+test('município e equipe de um projeto novo aparecem nos filtros', async ({ page }) => {
+  await page.getByText('Novo projeto').click();
+  await preencherFormulario(page, projetoNovo);
+  await page.getByRole('button', { name: 'Salvar projeto' }).click();
+
+  await filtrar(page, 'filtro-municipio', projetoNovo.municipio);
+  await expect(page.getByTestId('projeto')).toHaveCount(1);
+  await filtrar(page, 'filtro-municipio', '');
+  await filtrar(page, 'filtro-equipe', projetoNovo.responsavel);
+  await expect(page.getByTestId('projeto')).toHaveCount(1);
 });
 
 test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções', async ({ page }) => {
@@ -199,7 +344,6 @@ test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções',
   // Exceções permitidas ("Salvar projeto" fica no painel recolhido)
   await page.getByText('Novo projeto').click();
   await expect(page.getByRole('button', { name: 'Salvar projeto' })).toHaveCSS('color', VERDE);
-  await expect(page.getByRole('button', { name: /^Excluir / }).first()).toHaveCSS('color', VERMELHO);
   const coresStatus = {
     planejamento: 'rgb(21, 101, 192)',
     em_execucao: VERDE,
@@ -207,15 +351,16 @@ test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções',
     concluido: 'rgb(106, 27, 154)'
   };
   for (const [status, cor] of Object.entries(coresStatus)) {
-    await expect(page.locator(`.selo-${status}`).first()).toHaveCSS('color', cor);
+    await expect(page.locator(`.lista .selo-${status}`).first()).toHaveCSS('color', cor);
   }
 
-  // Modal de exclusão: botão de confirmar com texto avermelhado
-  await page.getByRole('button', { name: /^Excluir Coleta Seletiva/ }).click();
-  await expect(modal(page).getByRole('button', { name: 'Excluir' })).toHaveCSS('color', VERMELHO);
-  await modal(page).getByRole('button', { name: 'Cancelar' }).click();
+  // Excluir (no modal de detalhes e na confirmação) com texto avermelhado
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await expect(modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' })).toHaveCSS('color', VERMELHO);
+  await modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' }).click();
+  await expect(modalConfirmacao(page).getByRole('button', { name: 'Excluir' })).toHaveCSS('color', VERMELHO);
 
-  // Todo o restante do texto visível deve ser preto ou branco
+  // Todo o restante do texto (incluindo os modais abertos) deve ser preto ou branco
   const foraDaRegra = await page.evaluate(({ permitidas, excecoes }) => {
     const problemas = [];
     for (const elemento of document.querySelectorAll('body *')) {
@@ -230,6 +375,8 @@ test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções',
     return problemas;
   }, { permitidas: [PRETO, BRANCO], excecoes: '.selo, .botao-excluir, .botao-salvar' });
   expect(foraDaRegra).toEqual([]);
+
+  await modalConfirmacao(page).getByRole('button', { name: 'Cancelar' }).click();
 });
 
 test('descarta dados adulterados no localStorage', async ({ page }) => {

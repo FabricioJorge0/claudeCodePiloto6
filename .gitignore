@@ -10,6 +10,9 @@ playwright/.cache/
 # Pacotes de evidências gerados localmente (entregues fora do repositório)
 evidencias-*.zip
 
+# Material de entrega da atividade (relatório, prints, evidências), mantido fora do repositório
+entrega/
+
 # Variáveis de ambiente e segredos
 .env
 .env.*

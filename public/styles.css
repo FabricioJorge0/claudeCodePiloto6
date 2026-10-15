@@ -70,22 +70,6 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 .cartao-resumo .valor-moeda { font-size: 1.1rem; line-height: 1.9; }
 .cartao-resumo .rotulo { font-size: .85rem; }
 
-.barra {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.filtro { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
-.filtro select {
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--verde);
-  background: var(--branco);
-  color: var(--preto);
-  font: inherit;
-}
 
 .mensagem { min-height: 1.5em; margin: 4px 0; }
 
@@ -111,6 +95,64 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   overflow-wrap: anywhere;
 }
 .projeto h3 { margin: 0; font-size: 1rem; }
+
+/* Cartão inteiro clicável: o botão do título estende sua área a todo o cartão */
+.projeto { position: relative; transition: box-shadow .15s, border-color .15s; }
+.projeto:hover { border-color: var(--verde); box-shadow: 0 2px 10px rgba(46, 125, 50, .18); }
+.projeto:focus-within { outline: 2px solid var(--verde); outline-offset: 2px; }
+.projeto-abrir {
+  all: unset;
+  cursor: pointer;
+  color: var(--preto);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.projeto-abrir::after { content: ""; position: absolute; inset: 0; border-radius: 8px; }
+
+/* Filtros da lista */
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 10px 12px;
+  align-items: end;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: var(--verde-claro);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+}
+.filtros label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; min-width: 0; }
+.filtros select, .filtros input {
+  width: 100%;
+  height: 2.25rem;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--verde);
+  background: var(--branco);
+  color: var(--preto);
+  font: inherit;
+}
+.filtros select:focus-visible, .filtros input:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
+.filtros .botao-secundario { justify-self: stretch; align-self: end; }
+
+/* Modal de detalhes */
+.modal-corpo { padding: 16px 20px 8px; display: flex; flex-direction: column; gap: 12px; }
+.modal-corpo .mensagem { margin: 0; min-height: 1.5em; }
+.detalhes { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; overflow-wrap: anywhere; }
+.detalhes dt { font-weight: 600; }
+.detalhes dd { margin: 0; }
+.campo-status { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.campo-status select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--verde);
+  background: var(--branco);
+  color: var(--preto);
+  font: inherit;
+  font-weight: 400;
+}
+.campo-status select:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
 .projeto dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .9rem; }
 .projeto dt { font-weight: 600; }
 .projeto dd { margin: 0; }
@@ -141,8 +183,6 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 
 .rodape { font-size: .85rem; padding-bottom: 24px; border-top: 1px solid var(--borda); padding-top: 12px; }
 
-.acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-
 .painel {
   background: var(--verde-claro);
   border: 1px solid var(--borda);
@@ -168,7 +208,7 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
   color: var(--preto);
   font: inherit;
 }
-.formulario input:focus-visible, .formulario select:focus-visible, .filtro select:focus-visible {
+.formulario input:focus-visible, .formulario select:focus-visible {
   outline: 2px solid var(--verde);
   outline-offset: 1px;
 }
@@ -229,11 +269,10 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 }
 .modal::backdrop { background: rgba(0, 0, 0, .5); }
 .modal h2 { margin: 0; padding: 12px 20px; font-size: 1.1rem; background: var(--verde); color: var(--branco); }
-.modal p { margin: 0; padding: 16px 20px 20px; overflow-wrap: anywhere; }
+.modal > p { margin: 0; padding: 16px 20px 20px; overflow-wrap: anywhere; }
 .modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
 .modal-acoes button { align-self: auto; }
 
 @media (max-width: 480px) {
   .lista { grid-template-columns: 1fr; }
-  .barra { flex-direction: column; align-items: flex-start; }
 }
