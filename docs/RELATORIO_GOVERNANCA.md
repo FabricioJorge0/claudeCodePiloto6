@@ -1176,3 +1176,61 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Pediu as mudanças e **autorizou, no próprio pedido, o commit e o push** ao final.
+- Registro posterior: o commit desta iteração é o `64123e8`, com push para `origin/main` (`6e2e479..64123e8`). Logo depois, o assistente conferiu que a Vercel publicou sozinha: modal de detalhes presente e botão de restaurar ausente.
+
+---
+
+## Iteração 35 — 2026-10-15 — CI aprovada no modal de detalhes e filtros
+
+### Prompt do humano
+
+> passou
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `64123e8` passou** (93 testes Node em Node 22 e 24; 42 testes Playwright no Linux).
+- Nenhuma alteração de código e nenhum commit. Este registro fica local até a próxima alteração real, para não criar um ciclo de commits só de registro.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+
+---
+
+## Iteração 36 — 2026-10-15 — Material de entrega atualizado (prints, zip v4 e relatório)
+
+### Prompt do humano
+
+> sim, atualize os prints, o zip v4 e o relatório
+
+### O que o assistente executou
+
+- Rodou de novo os testes: Node com **93/93**; Playwright local com **42/42**; `npm audit` com 0 vulnerabilidades.
+- Rodou a suíte E2E contra `https://claude-code-piloto6.vercel.app`: **42/42 aprovados** (10,5 s), com 42 traces. Conferiu que um trace contém requisições para a Vercel.
+- Gerou **`evidencias-e2e-vercel-2026-10-15-v4-detalhes-filtros.zip`** (24,5 MB, 105 arquivos: relatório HTML, 42 traces e `LEIAME.txt` com o commit `64123e8` e os 21 cenários). Os zips v1–v3 foram mantidos na raiz.
+- Pasta `entrega/`:
+  - trocou o zip v3 pelo v4;
+  - trocou os prints por `print-1-desktop-painel-filtros.png` e `print-2-mobile-modal-detalhes.png`, tirados da Vercel;
+  - regenerou o relatório `.docx` e o `.pdf` (3 páginas no PDF) com os números novos, o commit `64123e8` e a nova linha "Detalhes, status e filtros".
+- **Correção feita na revisão:** a seção "Forma de reversão" ainda citava o botão "Restaurar dados de exemplo", que foi removido. O texto passou a indicar como apagar a chave `gpa:projetos:v1` do localStorage.
+- Nenhuma alteração de código e nenhum commit. A pasta `entrega/` e os zips são ignorados pelo Git.
+
+### Aprovações do humano
+
+- Autorizou atualizar os prints, o zip v4 e o relatório.
+
+---
+
+## Iteração 37 — 2026-10-15 — Commit do relatório de governança
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `docs: registra CI aprovada e material de entrega atualizado no relatório de governança`, com push para `origin/main`. Inclui somente este relatório (iterações 35 a 37).
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.
