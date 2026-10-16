@@ -276,3 +276,66 @@ h2 { font-size: 1.2rem; margin: 24px 0 12px; }
 @media (max-width: 480px) {
   .lista { grid-template-columns: 1fr; }
 }
+
+/* Modal de detalhes com localização e clima */
+.modal-largo {
+  width: min(920px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+.modal-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 20px;
+  align-items: start;
+}
+.detalhes-coluna, .local-coluna { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.painel-local h3, .cartao-clima h3 { margin: 0 0 6px; font-size: 1rem; }
+.painel-local .mensagem { margin: 0 0 6px; }
+
+.mapa {
+  height: 240px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mapa[hidden] { display: none; }
+
+/* Textos do Leaflet seguem a paleta (preto) */
+.leaflet-container { font: inherit; font-size: .8rem; }
+.leaflet-container a,
+.leaflet-control-attribution,
+.leaflet-popup-content-wrapper,
+.leaflet-bar a { color: var(--preto); }
+
+.cartao-clima {
+  background: var(--verde-claro);
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--verde);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.clima-principal { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; }
+.clima-icone { font-size: 1.8rem; line-height: 1; }
+.clima-temperatura { font-size: 1.6rem; font-weight: 700; }
+.clima-descricao { font-weight: 600; }
+.clima-dados { font-size: .9rem; }
+.clima-rosa { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .9rem; }
+.vento-seta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--branco);
+  border: 2px solid var(--verde);
+  font-weight: 700;
+  transition: transform .3s;
+}
+.clima-fonte { margin: 8px 0 0; font-size: .75rem; }
+
+@media (max-width: 720px) {
+  .modal-grade { grid-template-columns: minmax(0, 1fr); }
+  .mapa { height: 200px; }
+}

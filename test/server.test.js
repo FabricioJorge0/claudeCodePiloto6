@@ -49,10 +49,24 @@ describe('servidor', () => {
     assert.equal(css.status, 200);
     assert.match(css.headers['content-type'], /^text\/css/);
 
-    for (const arquivo of ['/js/app.js', '/js/projetos.js', '/js/repositorio.js', '/js/dados-exemplo.js']) {
+    for (const arquivo of ['/js/app.js', '/js/projetos.js', '/js/repositorio.js', '/js/dados-exemplo.js', '/js/clima.js', '/js/mapa.js']) {
       const js = await requisitar(arquivo);
       assert.equal(js.status, 200, arquivo);
       assert.match(js.headers['content-type'], /^text\/javascript/, arquivo);
+    }
+  });
+
+  test('entrega a cópia local do Leaflet (script, estilo e ícones PNG)', async () => {
+    const tipos = {
+      '/vendor/leaflet/leaflet.js': /^text\/javascript/,
+      '/vendor/leaflet/leaflet.css': /^text\/css/,
+      '/vendor/leaflet/images/marker-icon.png': /^image\/png$/,
+      '/vendor/leaflet/images/marker-shadow.png': /^image\/png$/
+    };
+    for (const [arquivo, tipo] of Object.entries(tipos)) {
+      const res = await requisitar(arquivo);
+      assert.equal(res.status, 200, arquivo);
+      assert.match(res.headers['content-type'], tipo, arquivo);
     }
   });
 
@@ -92,8 +106,24 @@ describe('segurança', () => {
       assert.match(res.headers['content-security-policy'], /frame-ancestors 'none'/);
       assert.equal(res.headers['x-content-type-options'], 'nosniff');
       assert.equal(res.headers['x-frame-options'], 'DENY');
-      assert.equal(res.headers['referrer-policy'], 'no-referrer');
+      assert.equal(res.headers['referrer-policy'], 'strict-origin-when-cross-origin');
     }
+  });
+
+  test('CSP libera só o necessário para mapa e clima', async () => {
+    const csp = (await requisitar('/')).headers['content-security-policy'];
+    const diretivas = Object.fromEntries(csp.split(';').map((d) => {
+      const [nome, ...valores] = d.trim().split(/\s+/);
+      return [nome, valores];
+    }));
+    // Scripts e estilos: só do próprio site (sem CDN, sem inline)
+    assert.equal(diretivas['script-src'], undefined);
+    assert.equal(diretivas['style-src'], undefined);
+    assert.deepEqual(diretivas['default-src'], ["'self'"]);
+    assert.deepEqual(diretivas['img-src'], ["'self'", 'data:', 'https://tile.openstreetmap.org']);
+    assert.deepEqual(diretivas['connect-src'], [
+      "'self'", 'https://api.open-meteo.com', 'https://geocoding-api.open-meteo.com'
+    ]);
   });
 
   const tentativasTraversal = [

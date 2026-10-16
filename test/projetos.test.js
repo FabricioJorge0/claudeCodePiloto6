@@ -34,9 +34,9 @@ describe('dados de exemplo', () => {
     }
   });
 
-  test('municípios estão marcados como fictícios', () => {
+  test('municípios são reais no formato "Cidade - UF" (para mapa e clima)', () => {
     for (const p of dadosExemplo) {
-      assert.match(p.municipio, /\(fictício\)$/);
+      assert.match(p.municipio, /^[A-Za-zÀ-ÿ' ]+ - [A-Z]{2}$/);
     }
   });
 });
@@ -194,7 +194,7 @@ describe('filtrarProjetos', () => {
   });
 
   test('por município (correspondência exata)', () => {
-    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { municipio: 'Vale Verde (fictício)' })), [1, 4]);
+    assert.deepEqual(ids(filtrarProjetos(dadosExemplo, { municipio: 'Cuiabá - MT' })), [1, 4]);
     assert.deepEqual(filtrarProjetos(dadosExemplo, { municipio: 'Vale' }), []);
   });
 
@@ -221,7 +221,7 @@ describe('filtrarProjetos', () => {
   test('combina todos os filtros', () => {
     const resultado = filtrarProjetos(dadosExemplo, {
       status: 'em_execucao',
-      municipio: 'Vale Verde (fictício)',
+      municipio: 'Cuiabá - MT',
       responsavel: 'Equipe Alfa',
       prazoDe: '2027-01-01',
       prazoAte: '2027-12-31',
@@ -249,12 +249,7 @@ describe('filtrarProjetos', () => {
 describe('opcoesDeFiltro', () => {
   test('lista municípios e equipes distintos em ordem alfabética', () => {
     const { municipios, equipes } = opcoesDeFiltro(dadosExemplo);
-    assert.deepEqual(municipios, [
-      'Campo Largo do Sul (fictício)',
-      'Porto Sereno (fictício)',
-      'Serra Azul (fictício)',
-      'Vale Verde (fictício)'
-    ]);
+    assert.deepEqual(municipios, ['Cáceres - MT', 'Cuiabá - MT', 'Rondonópolis - MT', 'Sinop - MT']);
     assert.deepEqual(equipes, ['Equipe Alfa', 'Equipe Beta', 'Equipe Delta', 'Equipe Épsilon', 'Equipe Gama', 'Equipe Zeta']);
   });
 

@@ -1234,3 +1234,133 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `b52ccd7`, com push para `origin/main` (`64123e8..b52ccd7`).
+
+---
+
+## Iteração 38 — 2026-10-15 — Resumo completo do sistema
+
+### Prompt do humano
+
+> resuma por completo todo o sistema
+
+### O que o assistente executou
+
+- Apenas explicação: finalidade, funcionalidades, arquitetura, segurança, testes, CI, deploy, evidências e governança.
+- Nenhuma alteração de código, nenhum teste executado e nenhum commit. Este registro fica local.
+
+### Aprovações do humano
+
+- Nenhuma aprovação necessária (somente leitura).
+
+---
+
+## Iteração 39 — 2026-10-16 — Mapa e clima do município no modal de detalhes
+
+### Prompt do humano
+
+> Eu possuo no um sistema no github de monitoramente de tempo em uma determinada regiao, onde eu coloco o nome da cidade e me retorna como esta o tempo, se esta chuvoso, velocidade do vento e a direção, eu quero implementar isso nesse sistema de governança, onde ao abrir o card do projeto, clicando no card, teria um espaço mostrando um mapa mostrando a localização do municipio cadastrado, alem disso, mostraria tambem um card dentro do modal mostrando informações do tempo na regiao. Esse projeto de clima esta no github, adapte ele para o projeto de governança: https://github.com/FabricioJorge0/Projeto_clima
+
+### Análise do projeto de origem (somente leitura)
+
+- O repositório foi clonado numa pasta temporária isolada, fora do projeto, e **nada dele foi executado**. São 3 arquivos (HTML, CSS e JS): OpenWeather + Leaflet 1.9.4 (via unpkg com SRI) + tiles do OpenStreetMap.
+- Problemas encontrados e informados ao humano:
+  1. **chave da API da OpenWeather exposta** no `script.js` de um repositório público; o assistente **não a copiou** e recomendou revogá-la;
+  2. dados da API inseridos com `innerHTML` (risco de XSS);
+  3. vento recebido em m/s e exibido como "km/h" (erro de unidade);
+  4. ícone carregado por `http://` (conteúdo misto em sites HTTPS).
+- Os municípios eram fictícios e não existem no mapa.
+
+### Decisões do humano (perguntadas pelo assistente)
+
+- **Localização:** "Usar municípios reais". Isso **altera a regra inicial de "apenas dados fictícios"** para os municípios. Projetos, equipes, prazos e valores continuam fictícios.
+- **API de clima:** Open-Meteo, **sem chave**.
+- **Leaflet:** cópia local no projeto.
+
+### O que o assistente executou
+
+**Leaflet (cópia local)**
+- Baixou o Leaflet 1.9.4 (JS, CSS, ícones e LICENSE BSD-2) e **conferiu os hashes SRI**. Eles são idênticos aos do projeto original: `sha256-20nQ…BlZBo=` (JS) e `sha256-p4Nx…MY=` (CSS).
+- Copiou os arquivos para `public/vendor/leaflet/`. Nenhuma dependência npm foi adicionada.
+
+**Clima e localização** (`public/js/clima.js`, novo)
+- Geocodificação do Open-Meteo restrita ao Brasil, com desempate por UF. O assistente confirmou na API real que "Várzea Grande" existe em 5 estados, por isso o formato "Cidade - UF".
+- Previsão atual: temperatura, umidade, precipitação, código WMO (descrição e se está chovendo), vento em km/h e direção (ponto cardeal).
+- Respostas validadas, tempo limite de 8 s, cache em memória e `fetch` injetável para testes.
+
+**Mapa** (`public/js/mapa.js`, novo)
+- Leaflet + OpenStreetMap com créditos exibidos.
+- O popup recebe um elemento com `textContent`, porque o Leaflet interpretaria strings como HTML.
+
+**Interface**
+- O modal de detalhes ficou mais largo, com duas colunas no desktop e empilhado no celular. A coluna nova tem:
+  - "Localização", com o nome encontrado e o mapa com marcador;
+  - o cartão "Tempo agora": ícone, temperatura, condição, "Chovendo agora", umidade, vento, direção e uma seta que aponta para onde o vento vai, além do horário local e do crédito do Open-Meteo.
+- Mensagens para município não encontrado, falha de localização e falha de clima.
+- Consultas de um projeto fechado são descartadas, para não sobrescrever o projeto aberto.
+- Formulário: rótulo "Município (Cidade - UF)", com o exemplo "Cuiabá - MT".
+- Aviso do topo atualizado (municípios reais, demais dados fictícios). Os textos do Leaflet seguem a paleta (preto).
+
+**Dados**
+- Exemplos trocados para municípios reais de MT: Cuiabá, Rondonópolis, Sinop e Cáceres, no formato "Cidade - UF".
+- **Migração automática** (`MIGRACAO_MUNICIPIOS` em `repositorio.js`): quem já tinha os municípios fictícios salvos no navegador os recebe convertidos na primeira leitura, **sem perder projetos**.
+
+**Servidor e segurança** (`src/server.js`)
+- CSP com exceções mínimas: `img-src 'self' data: https://tile.openstreetmap.org` e `connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com`. Scripts e estilos continuam só do próprio site.
+- `Referrer-Policy` passou de `no-referrer` para `strict-origin-when-cross-origin`, porque os servidores de mapa do OSM exigem o Referer. Só a origem é enviada.
+- **Correção encontrada pelo assistente:** o servidor não conhecia `.png`, e os ícones do mapa seriam bloqueados por `nosniff`. Foi adicionado `image/png`.
+
+**Testes**
+- `test/clima.test.js` (novo): formatos de município, desempate por UF, códigos WMO, pontos cardeais, URLs das APIs, cache, erros HTTP, de rede e de JSON, e respostas inválidas.
+- `test/repositorio.test.js`: migração (inclusive com falha ao gravar).
+- `test/server.test.js`: CSP mínima, Referrer-Policy e arquivos do Leaflet com o tipo correto.
+- `test/projetos.test.js`: dados de exemplo no formato "Cidade - UF".
+- **Total Node: 115/115.**
+- `e2e/app.spec.js`: **APIs e tiles simulados** com `page.route`, sem depender da internet nem do clima do dia. Cenários novos:
+  - mapa e clima do município (valores, consultas e modal dentro da tela);
+  - município não encontrado (sem consulta de clima);
+  - falha do clima com o mapa mantido;
+  - resposta atrasada que não sobrescreve outro projeto;
+  - XSS no popup.
+  - A paleta também é verificada com mapa e clima carregados.
+  - **Total E2E: 52/52** (26 cenários × desktop e mobile), em duas rodadas completas.
+- Ajustes durante os testes:
+  - o teste de falha do clima aceita só o erro 503 que ele mesmo simula;
+  - houve uma falha passageira `ERR_NO_BUFFER_SPACE` (rede do Windows com 10 navegadores) que não se repetiu.
+- **Verificação com as APIs reais** (servidor local com CSP): Sinop localizada, 6 tiles carregados, clima exibido e **nenhum erro no console**, no desktop e no mobile. As capturas de tela foram revisadas.
+- `npm audit`: 0 vulnerabilidades. `README.md`: funcionalidades, estrutura, segurança e tabela de serviços externos e licenças.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `public/js/clima.js`, `public/js/mapa.js` | Criados |
+| `public/vendor/leaflet/` (JS, CSS, imagens, LICENSE) | Criado (Leaflet 1.9.4, SRI conferido) |
+| `public/index.html`, `public/js/app.js`, `public/styles.css` | Modificados |
+| `public/js/dados-exemplo.js`, `public/js/repositorio.js` | Modificados (municípios reais e migração) |
+| `src/server.js` | Modificado (CSP, Referrer-Policy, `.png`) |
+| `test/clima.test.js` | Criado |
+| `test/projetos.test.js`, `test/repositorio.test.js`, `test/server.test.js`, `e2e/app.spec.js` | Modificados |
+| `README.md`, `docs/RELATORIO_GOVERNANCA.md` | Modificados |
+
+### Aprovações do humano
+
+- Pediu a adaptação do Projeto_clima e decidiu: municípios reais, Open-Meteo e Leaflet local.
+- Commit e push **ainda não autorizados**.
+
+---
+
+## Iteração 40 — 2026-10-16 — Commit e push do mapa e clima
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `feat: mapa e clima do município no modal de detalhes (adaptado do Projeto_clima)`, com push para `origin/main`. Inclui as alterações da iteração 39 e este relatório (iterações 38 a 40).
+- O push dispara a CI e o deploy na Vercel. O assistente vai conferir no domínio público se a nova versão foi publicada; a CI fica a cargo do humano.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.

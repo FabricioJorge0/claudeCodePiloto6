@@ -57,12 +57,57 @@ async function filtrar(page, testid, valor) {
   else await campo.fill(valor);
 }
 
+// Serviços externos simulados: os testes não dependem da internet nem do clima real.
+// Cada teste pode sobrescrever uma rota com page.route (a última registrada vence).
+const LOCAIS_FALSOS = {
+  'Cuiabá': { latitude: -15.6, longitude: -56.1 },
+  'Rondonópolis': { latitude: -16.47, longitude: -54.64 },
+  'Sinop': { latitude: -11.86, longitude: -55.5 },
+  'Cáceres': { latitude: -16.07, longitude: -57.68 }
+};
+const CLIMA_FALSO = {
+  current: {
+    time: '2026-10-16T14:45',
+    temperature_2m: 31.2,
+    relative_humidity_2m: 54,
+    precipitation: 0.6,
+    weather_code: 61,
+    wind_speed_10m: 12.3,
+    wind_direction_10m: 90
+  }
+};
+// PNG transparente de 1×1 px para as imagens do mapa
+const TILE_FALSO = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64'
+);
+
 let errosNoConsole;
 let dialogosNativos;
+let requisicoes;
 
 test.beforeEach(async ({ page }) => {
   errosNoConsole = [];
   dialogosNativos = [];
+  requisicoes = { geocodificacao: [], previsao: [], tiles: 0 };
+
+  await page.route('https://geocoding-api.open-meteo.com/**', (rota) => {
+    const url = new URL(rota.request().url());
+    requisicoes.geocodificacao.push(url);
+    const nome = url.searchParams.get('name');
+    const local = LOCAIS_FALSOS[nome];
+    rota.fulfill({
+      json: local ? { results: [{ name: nome, admin1: 'Mato Grosso', country_code: 'BR', ...local }] } : {}
+    });
+  });
+  await page.route('https://api.open-meteo.com/**', (rota) => {
+    requisicoes.previsao.push(new URL(rota.request().url()));
+    rota.fulfill({ json: CLIMA_FALSO });
+  });
+  await page.route('https://tile.openstreetmap.org/**', (rota) => {
+    requisicoes.tiles += 1;
+    rota.fulfill({ body: TILE_FALSO, contentType: 'image/png' });
+  });
+
   page.on('pageerror', (erro) => errosNoConsole.push(erro.message));
   page.on('console', (msg) => {
     if (msg.type() === 'error') errosNoConsole.push(msg.text());
@@ -165,7 +210,7 @@ test('clicar no cartão abre o modal com os detalhes completos', async ({ page }
   await expect(detalhes).toBeVisible();
   await expect(detalhes.getByRole('heading', { name: 'Corredor Ecológico Mata Exemplo' })).toBeVisible();
   const campos = detalhes.getByTestId('detalhes-campos');
-  for (const texto of ['Campo Largo do Sul (fictício)', 'Equipe Gama', 'Atrasado', '30/06/2026', 'R$ 320.000,00', '60%', '#3']) {
+  for (const texto of ['Sinop - MT', 'Equipe Gama', 'Atrasado', '30/06/2026', 'R$ 320.000,00', '60%', '#3']) {
     await expect(campos).toContainText(texto);
   }
   await expect(detalhes.getByTestId('detalhes-status')).toHaveValue('atrasado');
@@ -274,11 +319,11 @@ test('clicar dentro da caixa dos modais não fecha', async ({ page }) => {
 test('filtra por município e equipe com opções dos projetos cadastrados', async ({ page }) => {
   const municipio = page.getByTestId('filtro-municipio');
   await expect(municipio.locator('option')).toHaveText([
-    'Todos', 'Campo Largo do Sul (fictício)', 'Porto Sereno (fictício)', 'Serra Azul (fictício)', 'Vale Verde (fictício)'
+    'Todos', 'Cáceres - MT', 'Cuiabá - MT', 'Rondonópolis - MT', 'Sinop - MT'
   ]);
   await expect(page.getByTestId('filtro-equipe').locator('option')).toHaveCount(7);
 
-  await filtrar(page, 'filtro-municipio', 'Vale Verde (fictício)');
+  await filtrar(page, 'filtro-municipio', 'Cuiabá - MT');
   await expect(page.getByTestId('projeto')).toHaveCount(2);
   await filtrar(page, 'filtro-equipe', 'Equipe Delta');
   await expect(page.getByTestId('projeto')).toHaveCount(1);
@@ -310,7 +355,7 @@ test('filtra por faixa de orçamento', async ({ page }) => {
 
 test('combina filtros e limpa todos', async ({ page }) => {
   await filtrar(page, 'filtro-status', 'em_execucao');
-  await filtrar(page, 'filtro-municipio', 'Porto Sereno (fictício)');
+  await filtrar(page, 'filtro-municipio', 'Cáceres - MT');
   await expect(page.getByTestId('projeto')).toHaveCount(1);
 
   await page.getByRole('button', { name: 'Limpar filtros' }).click();
@@ -329,6 +374,103 @@ test('município e equipe de um projeto novo aparecem nos filtros', async ({ pag
   await filtrar(page, 'filtro-municipio', '');
   await filtrar(page, 'filtro-equipe', projetoNovo.responsavel);
   await expect(page.getByTestId('projeto')).toHaveCount(1);
+});
+
+test('modal mostra o mapa e o tempo atual do município', async ({ page }) => {
+  await abrirDetalhes(page, 'Corredor Ecológico Mata Exemplo');
+  const detalhes = modalDetalhes(page);
+
+  await expect(detalhes.getByTestId('mapa-aviso')).toHaveText('Sinop, Mato Grosso');
+  const mapa = detalhes.getByTestId('detalhes-mapa');
+  await expect(mapa).toBeVisible();
+  await expect(mapa.locator('.leaflet-marker-icon')).toHaveCount(1);
+  await expect(mapa.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+  await expect.poll(() => requisicoes.tiles).toBeGreaterThan(0);
+
+  const clima = detalhes.getByTestId('cartao-clima');
+  for (const texto of ['31,2 °C', 'Chuva', 'Chovendo agora', 'Sim (0,6 mm)', '54%', '12,3 km/h', 'Leste (L, 90°)', 'Vento vindo de Leste', 'Atualizado às 14:45', 'Dados: Open-Meteo.com']) {
+    await expect(clima).toContainText(texto);
+  }
+  // A seta aponta para onde o vento vai (vento de leste → seta para oeste)
+  await expect(clima.locator('.vento-seta')).toHaveCSS('transform', /matrix\(-?0(\.0+)?, -1, 1, -?0(\.0+)?, 0, 0\)|matrix\(-?[0-9.e-]+, -1, 1, -?[0-9.e-]+, 0, 0\)/);
+
+  // Consultas corretas: município + UF restrito ao Brasil; previsão nas coordenadas encontradas, vento em km/h
+  expect(requisicoes.geocodificacao.at(-1).searchParams.get('name')).toBe('Sinop');
+  expect(requisicoes.geocodificacao.at(-1).searchParams.get('countryCode')).toBe('BR');
+  const previsao = requisicoes.previsao.at(-1);
+  expect(previsao.searchParams.get('latitude')).toBe('-11.86');
+  expect(previsao.searchParams.get('longitude')).toBe('-55.5');
+  expect(previsao.searchParams.get('wind_speed_unit')).toBe('kmh');
+
+  // O modal cabe na tela (inclusive no celular)
+  const caixa = await detalhes.boundingBox();
+  const largura = page.viewportSize().width;
+  expect(caixa.x).toBeGreaterThanOrEqual(0);
+  expect(caixa.x + caixa.width).toBeLessThanOrEqual(largura);
+});
+
+test('município não encontrado avisa e não consulta o clima', async ({ page }) => {
+  await page.getByText('Novo projeto').click();
+  await preencherFormulario(page, projetoNovo);
+  await page.getByRole('button', { name: 'Salvar projeto' }).click();
+
+  await abrirDetalhes(page, projetoNovo.nome);
+  const detalhes = modalDetalhes(page);
+  await expect(detalhes.getByTestId('mapa-aviso')).toContainText('não encontrado no mapa');
+  await expect(detalhes.getByTestId('mapa-aviso')).toContainText('"Cidade - UF"');
+  await expect(detalhes.getByTestId('detalhes-mapa')).toBeHidden();
+  await expect(detalhes.getByTestId('cartao-clima')).toContainText('não é possível consultar o clima');
+  expect(requisicoes.previsao).toHaveLength(0);
+});
+
+test('falha no serviço de clima mostra aviso e mantém o mapa', async ({ page }) => {
+  await page.route('https://api.open-meteo.com/**', (rota) => rota.fulfill({ status: 503, body: 'indisponível' }));
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  const detalhes = modalDetalhes(page);
+  await expect(detalhes.getByTestId('cartao-clima')).toContainText('Não foi possível obter o clima agora.');
+  await expect(detalhes.getByTestId('mapa-aviso')).toHaveText('Cuiabá, Mato Grosso');
+  await expect(detalhes.getByTestId('detalhes-mapa')).toBeVisible();
+
+  // O navegador registra no console o 503 simulado; só esse erro esperado é aceito
+  const esperado = (erro) => erro.includes('status of 503');
+  expect(errosNoConsole.filter(esperado)).toHaveLength(1);
+  errosNoConsole = errosNoConsole.filter((erro) => !esperado(erro));
+});
+
+test('resposta atrasada de um projeto fechado não sobrescreve o projeto aberto', async ({ page }) => {
+  // A localização de Cuiabá demora; antes dela chegar, o usuário troca de projeto
+  await page.route('https://geocoding-api.open-meteo.com/**', async (rota) => {
+    const url = new URL(rota.request().url());
+    const nome = url.searchParams.get('name');
+    if (nome === 'Cuiabá') await new Promise((ok) => setTimeout(ok, 800));
+    await rota.fulfill({ json: { results: [{ name: nome, admin1: 'Mato Grosso', country_code: 'BR', ...LOCAIS_FALSOS[nome] }] } });
+  });
+
+  await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await modalDetalhes(page).getByRole('button', { name: 'Fechar' }).click();
+  await abrirDetalhes(page, 'Corredor Ecológico Mata Exemplo');
+
+  await expect(modalDetalhes(page).getByTestId('mapa-aviso')).toHaveText('Sinop, Mato Grosso');
+  await page.waitForTimeout(1000);
+  await expect(modalDetalhes(page).getByTestId('mapa-aviso')).toHaveText('Sinop, Mato Grosso');
+});
+
+test('nome vindo da API aparece como texto no popup do mapa (XSS)', async ({ page }) => {
+  const nomeMalicioso = '<img src=x onerror=alert(1)>';
+  await page.route('https://geocoding-api.open-meteo.com/**', (rota) => rota.fulfill({
+    json: { results: [{ name: nomeMalicioso, admin1: 'Mato Grosso', country_code: 'BR', latitude: -15.6, longitude: -56.1 }] }
+  }));
+
+  await page.getByText('Novo projeto').click();
+  await preencherFormulario(page, { ...projetoNovo, municipio: `${nomeMalicioso} - MT` });
+  await page.getByRole('button', { name: 'Salvar projeto' }).click();
+  await abrirDetalhes(page, projetoNovo.nome);
+
+  const mapa = modalDetalhes(page).getByTestId('detalhes-mapa');
+  await mapa.locator('.leaflet-marker-icon').click();
+  await expect(mapa.locator('.leaflet-popup-content')).toHaveText(`${nomeMalicioso}, Mato Grosso`);
+  await expect(mapa.locator('.leaflet-popup-content img')).toHaveCount(0);
+  await expect(modalDetalhes(page).getByTestId('mapa-aviso')).toHaveText(`${nomeMalicioso}, Mato Grosso`);
 });
 
 test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções', async ({ page }) => {
@@ -356,6 +498,8 @@ test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções',
 
   // Excluir (no modal de detalhes e na confirmação) com texto avermelhado
   await abrirDetalhes(page, 'Coleta Seletiva nas Escolas Modelo');
+  await expect(modalDetalhes(page).getByTestId('cartao-clima')).toContainText('°C');
+  await expect(modalDetalhes(page).locator('.leaflet-control-attribution')).toBeVisible();
   await expect(modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' })).toHaveCSS('color', VERMELHO);
   await modalDetalhes(page).getByRole('button', { name: 'Excluir projeto' }).click();
   await expect(modalConfirmacao(page).getByRole('button', { name: 'Excluir' })).toHaveCSS('color', VERMELHO);

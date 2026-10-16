@@ -2,7 +2,7 @@
 
 Sistema web responsivo para acompanhar projetos ambientais (status, responsável e prazo), criado para mostrar um ciclo de desenvolvimento seguro na atividade da SEMA.
 
-> **Aviso:** todos os dados do sistema são **fictícios**. Nenhum projeto, pessoa ou organização real está representado.
+> **Aviso:** projetos, equipes, prazos e valores são **fictícios**. Nenhum projeto, pessoa ou organização real está representado. Os **municípios são reais** (formato "Cidade - UF") apenas para localizar o projeto no mapa e consultar o clima da região.
 
 ## Objetivos
 
@@ -40,6 +40,7 @@ Funcionalidades:
 - **Cadastro** de projeto com validação.
 - **Filtros** combináveis: status, município, equipe, intervalo de prazo e faixa de orçamento. As opções de município e equipe vêm dos projetos cadastrados. O botão "Limpar filtros" restaura a lista completa.
 - **Detalhes em modal:** clicar em qualquer ponto do cartão de um projeto (ou focar o título e apertar Enter) abre um modal com todas as informações. Nele é possível **alterar o status**, que é salvo na hora, e **excluir o projeto**, com confirmação.
+- **Mapa e clima do município** (no modal de detalhes): mapa com a localização do município (Leaflet + OpenStreetMap) e um cartão com o tempo atual: temperatura, condição, se está chovendo, umidade, velocidade do vento (km/h) e direção (ponto cardeal e seta). Município não encontrado ou serviço fora do ar geram mensagens claras, sem quebrar o modal. Adaptado do projeto [Projeto_clima](https://github.com/FabricioJorge0/Projeto_clima).
 - Os cartões da lista não têm botão de exclusão, e não existe mais o botão de restaurar os dados de exemplo. Os dados de exemplo são carregados só na primeira visita.
 
 **Paleta visual:** branco predominante e verde como cor de apoio (faixa do topo, bordas, barras de progresso, painel do formulário). O texto é sempre preto, ou branco sobre o verde. As exceções são os selos de status (cada um na sua cor), os botões **Excluir** (texto avermelhado) e **Salvar projeto** (texto verde). A regra é verificada por um teste E2E.
@@ -89,9 +90,13 @@ public/
   js/app.js              interface (DOM)
   js/repositorio.js      persistência no localStorage
   js/projetos.js         regras de negócio e validação (funções puras)
-  js/dados-exemplo.js    dados fictícios
+  js/dados-exemplo.js    dados de exemplo (projetos fictícios, municípios reais)
+  js/clima.js            localização e clima (Open-Meteo), com validação das respostas
+  js/mapa.js             mapa do município (Leaflet)
+  vendor/leaflet/        Leaflet 1.9.4 (cópia local, integridade SRI conferida; licença BSD-2)
 test/
   projetos.test.js       regras de negócio e validação
+  clima.test.js          clima e localização (fetch simulado, sem rede)
   repositorio.test.js    localStorage (com armazenamento simulado)
   server.test.js         servidor e segurança
   sem-dialogos-nativos.test.js  proíbe alert/confirm/prompt no front-end
@@ -111,6 +116,18 @@ Status válidos: `planejamento`, `em_execucao`, `atrasado`, `concluido`.
 - Os dados lidos do localStorage são validados, e registros corrompidos ou adulterados são descartados
 - Tratamento de localStorage indisponível (modo privado) e de cota excedida
 - Nenhuma dependência de execução em produção
+- Serviços externos sem chave de API (nenhum segredo no código). A CSP do servidor libera só o necessário: imagens de `tile.openstreetmap.org` e chamadas a `api.open-meteo.com` e `geocoding-api.open-meteo.com`. Scripts e estilos vêm apenas do próprio site.
+- O popup do mapa recebe o texto como elemento (`textContent`), pois o Leaflet interpretaria strings como HTML
+- Respostas das APIs são validadas (números, tipos) antes de exibir; consultas antigas são descartadas ao trocar de projeto
+- Testes E2E simulam as APIs e o mapa (não dependem da internet nem do clima do dia)
+
+## Serviços externos e créditos
+
+| Serviço | Uso | Licença / termos |
+|---|---|---|
+| [Open-Meteo](https://open-meteo.com) | Geocodificação do município e clima atual | Gratuito para uso não comercial, sem chave; dados CC BY 4.0 (créditos exibidos no cartão) |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) | Imagens do mapa | ODbL (créditos exibidos no mapa) |
+| [Leaflet](https://leafletjs.com) | Biblioteca do mapa | BSD-2 (`public/vendor/leaflet/LICENSE`) |
 
 ## Governança
 

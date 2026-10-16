@@ -14,14 +14,27 @@ const TIPOS = {
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
+  '.png': 'image/png',
   '.ico': 'image/x-icon'
 };
 
+// Scripts e estilos só do próprio site (Leaflet está em /vendor). Exceções mínimas:
+// imagens do mapa (OpenStreetMap) e chamadas às APIs do Open-Meteo (clima e localização).
+const CSP = [
+  "default-src 'self'",
+  "img-src 'self' data: https://tile.openstreetmap.org",
+  "connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'"
+].join('; ');
+
 const CABECALHOS_SEGURANCA = {
-  'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  'Content-Security-Policy': CSP,
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'no-referrer'
+  // Envia só a origem em requisições externas: os servidores de mapa do OpenStreetMap exigem o Referer
+  'Referrer-Policy': 'strict-origin-when-cross-origin'
 };
 
 function enviar(res, status, corpo, tipo) {

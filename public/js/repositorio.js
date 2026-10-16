@@ -19,6 +19,27 @@ function copia(valor) {
   return JSON.parse(JSON.stringify(valor));
 }
 
+// Municípios fictícios das versões anteriores → municípios reais (para mapa e clima).
+// Aplicado na leitura, sem perder os projetos já cadastrados no navegador.
+export const MIGRACAO_MUNICIPIOS = {
+  'Vale Verde (fictício)': 'Cuiabá - MT',
+  'Serra Azul (fictício)': 'Rondonópolis - MT',
+  'Campo Largo do Sul (fictício)': 'Sinop - MT',
+  'Porto Sereno (fictício)': 'Cáceres - MT'
+};
+
+function migrarMunicipios(projetos) {
+  let alterou = false;
+  for (const p of projetos) {
+    const novo = MIGRACAO_MUNICIPIOS[p.municipio];
+    if (novo) {
+      p.municipio = novo;
+      alterou = true;
+    }
+  }
+  return alterou;
+}
+
 export function criarRepositorio(armazenamento, { chave = CHAVE_PADRAO, exemplo = dadosExemplo } = {}) {
   function gravar(projetos) {
     try {
@@ -49,7 +70,15 @@ export function criarRepositorio(armazenamento, { chave = CHAVE_PADRAO, exemplo 
       const dados = JSON.parse(bruto);
       if (!Array.isArray(dados)) return restaurar();
       // Descarta registros corrompidos ou adulterados
-      return dados.filter((p) => p && Number.isInteger(p.id) && p.id > 0 && validarProjeto(p).valido);
+      const projetos = dados.filter((p) => p && Number.isInteger(p.id) && p.id > 0 && validarProjeto(p).valido);
+      if (migrarMunicipios(projetos)) {
+        try {
+          gravar(projetos);
+        } catch {
+          // Sem espaço para gravar: a migração vale só para esta leitura
+        }
+      }
+      return projetos;
     } catch {
       return restaurar();
     }

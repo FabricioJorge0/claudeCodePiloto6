@@ -2,9 +2,12 @@
 
 import { ROTULOS_STATUS, STATUS_VALIDOS, filtrarProjetos, opcoesDeFiltro, resumoPorStatus } from './projetos.js';
 import { ErroValidacao, criarRepositorio } from './repositorio.js';
+import { buscarClima, buscarLocalizacao } from './clima.js';
+import { destruirMapa, mostrarMapa } from './mapa.js';
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const data = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' });
+const decimal = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 function armazenamentoDisponivel() {
   try {
@@ -141,6 +144,90 @@ function renderizarDetalhes(p) {
   document.getElementById('detalhes-status').value = p.status;
 }
 
+// ---------------------------------------------------------------- Mapa e clima
+
+// Cada abertura do modal gera uma consulta; respostas de consultas antigas são ignoradas
+let consultaAtual = 0;
+
+function mensagemClima(texto) {
+  document.getElementById('clima-conteudo').replaceChildren(el('p', { className: 'mensagem', textContent: texto }));
+}
+
+function renderizarClima(clima) {
+  const seta = el('span', { className: 'vento-seta', textContent: '↑' });
+  // A direção meteorológica indica de onde o vento vem; a seta aponta para onde ele vai
+  seta.style.transform = `rotate(${(clima.ventoGraus + 180) % 360}deg)`;
+  seta.setAttribute('aria-hidden', 'true');
+
+  const chuva = clima.chovendo
+    ? `Sim${clima.precipitacao > 0 ? ` (${decimal.format(clima.precipitacao)} mm)` : ''}`
+    : 'Não';
+
+  document.getElementById('clima-conteudo').replaceChildren(
+    el('div', { className: 'clima-principal' }, [
+      el('span', { className: 'clima-icone', textContent: clima.icone }),
+      el('span', { className: 'clima-temperatura', textContent: `${decimal.format(clima.temperatura)} °C` }),
+      el('span', { className: 'clima-descricao', textContent: clima.descricao })
+    ]),
+    el('dl', { className: 'detalhes clima-dados' }, listaDeCampos([
+      ['Chovendo agora', chuva],
+      ['Umidade', `${Math.round(clima.umidade)}%`],
+      ['Vento', `${decimal.format(clima.ventoKmh)} km/h`],
+      ['Direção', `${clima.ventoDirecao.nome} (${clima.ventoDirecao.sigla}, ${Math.round(clima.ventoGraus)}°)`]
+    ])),
+    el('div', { className: 'clima-rosa' }, [seta, el('span', { textContent: `Vento vindo de ${clima.ventoDirecao.nome}` })]),
+    el('p', {
+      className: 'clima-fonte',
+      textContent: `${clima.horario ? `Atualizado às ${clima.horario.slice(11, 16)} (horário local) · ` : ''}Dados: Open-Meteo.com`
+    })
+  );
+}
+
+async function carregarLocalEClima(projeto) {
+  const consulta = ++consultaAtual;
+  const aviso = document.getElementById('mapa-aviso');
+  const mapa = document.getElementById('detalhes-mapa');
+  const vigente = () => consulta === consultaAtual;
+
+  destruirMapa();
+  mapa.hidden = true;
+  aviso.textContent = 'Localizando município…';
+  mensagemClima('Carregando clima…');
+
+  let local;
+  try {
+    local = await buscarLocalizacao(projeto.municipio);
+  } catch {
+    if (!vigente()) return;
+    aviso.textContent = 'Não foi possível consultar a localização agora.';
+    mensagemClima('Clima indisponível no momento.');
+    return;
+  }
+  if (!vigente()) return;
+  if (!local) {
+    aviso.textContent = `Município "${projeto.municipio}" não encontrado no mapa. Use o formato "Cidade - UF".`;
+    mensagemClima('Sem a localização do município, não é possível consultar o clima.');
+    return;
+  }
+
+  const rotulo = local.estado ? `${local.nome}, ${local.estado}` : local.nome;
+  aviso.textContent = rotulo;
+  mapa.hidden = false;
+  try {
+    mostrarMapa(mapa, { ...local, rotulo });
+  } catch {
+    mapa.hidden = true;
+    aviso.textContent = `${rotulo} (mapa indisponível)`;
+  }
+
+  try {
+    const clima = await buscarClima(local);
+    if (vigente()) renderizarClima(clima);
+  } catch {
+    if (vigente()) mensagemClima('Não foi possível obter o clima agora.');
+  }
+}
+
 function abrirDetalhes(id) {
   const projeto = repositorio.buscar(id);
   if (!projeto) return;
@@ -149,6 +236,7 @@ function abrirDetalhes(id) {
   document.getElementById('detalhes-mensagem').textContent = '';
   document.getElementById('modal-detalhes').showModal();
   document.getElementById('detalhes-fechar').focus();
+  carregarLocalEClima(projeto);
 }
 
 function configurarDetalhes() {
@@ -199,6 +287,8 @@ function configurarDetalhes() {
   });
   modal.addEventListener('close', () => {
     idEmDetalhe = null;
+    consultaAtual += 1;
+    destruirMapa();
   });
 }
 

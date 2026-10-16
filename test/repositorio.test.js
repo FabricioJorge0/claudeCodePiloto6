@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { dadosExemplo } from '../public/js/dados-exemplo.js';
-import { CHAVE_PADRAO, ErroValidacao, criarRepositorio } from '../public/js/repositorio.js';
+import { CHAVE_PADRAO, ErroValidacao, MIGRACAO_MUNICIPIOS, criarRepositorio } from '../public/js/repositorio.js';
 
 // Simula o localStorage do navegador
 function criarArmazenamentoFalso(inicial = {}) {
@@ -169,5 +169,34 @@ describe('repositório (localStorage)', () => {
   test('atualizarStatus de id inexistente retorna null', () => {
     const repo = criarRepositorio(criarArmazenamentoFalso());
     assert.equal(repo.atualizarStatus(999, 'concluido'), null);
+  });
+
+  test('migra municípios fictícios antigos para os reais, sem perder projetos', () => {
+    const antigos = [
+      { ...dadosExemplo[0], municipio: 'Vale Verde (fictício)' },
+      { ...dadosExemplo[2], municipio: 'Campo Largo do Sul (fictício)' },
+      { ...novoProjeto, id: 7, municipio: 'Cidade Imaginária' }
+    ];
+    const armazenamento = criarArmazenamentoFalso({ [CHAVE_PADRAO]: JSON.stringify(antigos) });
+    const lista = criarRepositorio(armazenamento).listar();
+
+    assert.deepEqual(lista.map((p) => p.municipio), ['Cuiabá - MT', 'Sinop - MT', 'Cidade Imaginária']);
+    // A migração é gravada: a próxima leitura já encontra os nomes novos
+    const gravado = JSON.parse(armazenamento.bruto(CHAVE_PADRAO));
+    assert.equal(gravado[0].municipio, 'Cuiabá - MT');
+  });
+
+  test('tabela de migração cobre os 4 municípios fictícios antigos', () => {
+    assert.deepEqual(Object.keys(MIGRACAO_MUNICIPIOS).sort(), [
+      'Campo Largo do Sul (fictício)', 'Porto Sereno (fictício)', 'Serra Azul (fictício)', 'Vale Verde (fictício)'
+    ]);
+  });
+
+  test('falha ao gravar a migração não impede a leitura', () => {
+    const armazenamento = criarArmazenamentoFalso({
+      [CHAVE_PADRAO]: JSON.stringify([{ ...dadosExemplo[0], municipio: 'Vale Verde (fictício)' }])
+    });
+    armazenamento.setItem = () => { throw new Error('QuotaExceededError'); };
+    assert.equal(criarRepositorio(armazenamento).listar()[0].municipio, 'Cuiabá - MT');
   });
 });

@@ -4,13 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Governança de Projetos Ambientais</title>
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/styles.css">
+  <script defer src="/vendor/leaflet/leaflet.js"></script>
   <script type="module" src="/js/app.js"></script>
 </head>
 <body>
   <header class="topo">
     <h1>Governança de Projetos Ambientais</h1>
-    <p class="aviso" role="note">Ambiente de demonstração: todos os dados são fictícios e ficam salvos apenas neste navegador (localStorage).</p>
+    <p class="aviso" role="note">Ambiente de demonstração: projetos, equipes e valores são fictícios; os municípios são reais apenas para mapa e clima. Os dados ficam salvos só neste navegador (localStorage).</p>
   </header>
 
   <main>
@@ -24,7 +26,7 @@
         <summary><h2 id="titulo-novo">Novo projeto</h2></summary>
         <form id="form-projeto" class="formulario" data-testid="form-projeto" novalidate>
           <label>Nome <input name="nome" required minlength="3" maxlength="120"></label>
-          <label>Município <input name="municipio" required minlength="2" maxlength="80"></label>
+          <label>Município (Cidade - UF) <input name="municipio" required minlength="2" maxlength="80" placeholder="Ex.: Cuiabá - MT"></label>
           <label>Responsável <input name="responsavel" required minlength="2" maxlength="80"></label>
           <label>Status
             <select name="status" required>
@@ -84,15 +86,28 @@
     </section>
   </main>
 
-  <dialog id="modal-detalhes" class="modal" data-testid="modal-detalhes" aria-labelledby="detalhes-titulo">
+  <dialog id="modal-detalhes" class="modal modal-largo" data-testid="modal-detalhes" aria-labelledby="detalhes-titulo">
     <h2 id="detalhes-titulo"></h2>
-    <div class="modal-corpo">
-      <span id="detalhes-selo" class="selo"></span>
-      <dl id="detalhes-campos" class="detalhes" data-testid="detalhes-campos"></dl>
-      <label class="campo-status">Alterar status
-        <select id="detalhes-status" data-testid="detalhes-status"></select>
-      </label>
-      <p id="detalhes-mensagem" class="mensagem" role="status" aria-live="polite"></p>
+    <div class="modal-corpo modal-grade">
+      <div class="detalhes-coluna">
+        <span id="detalhes-selo" class="selo"></span>
+        <dl id="detalhes-campos" class="detalhes" data-testid="detalhes-campos"></dl>
+        <label class="campo-status">Alterar status
+          <select id="detalhes-status" data-testid="detalhes-status"></select>
+        </label>
+        <p id="detalhes-mensagem" class="mensagem" role="status" aria-live="polite"></p>
+      </div>
+      <div class="local-coluna">
+        <section class="painel-local" aria-labelledby="mapa-titulo">
+          <h3 id="mapa-titulo">Localização</h3>
+          <p id="mapa-aviso" class="mensagem" data-testid="mapa-aviso"></p>
+          <div id="detalhes-mapa" class="mapa" data-testid="detalhes-mapa" role="region" aria-label="Mapa do município" hidden></div>
+        </section>
+        <section class="cartao-clima" data-testid="cartao-clima" aria-labelledby="clima-titulo" aria-live="polite">
+          <h3 id="clima-titulo">Tempo agora</h3>
+          <div id="clima-conteudo"></div>
+        </section>
+      </div>
     </div>
     <div class="modal-acoes">
       <button type="button" id="detalhes-excluir" class="botao-excluir">Excluir projeto</button>

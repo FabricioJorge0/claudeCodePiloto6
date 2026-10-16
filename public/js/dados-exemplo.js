@@ -1,12 +1,13 @@
-// Dados 100% FICTÍCIOS, usados apenas para demonstração.
-// Nenhum projeto, pessoa, município ou órgão aqui representado existe.
+// Projetos, equipes, prazos e valores são FICTÍCIOS, usados apenas para demonstração.
+// Os municípios são reais (formato "Cidade - UF") apenas para localizar o projeto
+// no mapa e consultar o clima da região.
 // Carregados no localStorage na primeira visita (ou ao restaurar).
 
 export const dadosExemplo = [
   {
     id: 1,
     nome: 'Recuperação de Nascentes do Córrego Imaginário',
-    municipio: 'Vale Verde (fictício)',
+    municipio: 'Cuiabá - MT',
     responsavel: 'Equipe Alfa',
     status: 'em_execucao',
     prazo: '2027-03-31',
@@ -16,7 +17,7 @@ export const dadosExemplo = [
   {
     id: 2,
     nome: 'Monitoramento da Qualidade do Ar — Zona Norte',
-    municipio: 'Serra Azul (fictício)',
+    municipio: 'Rondonópolis - MT',
     responsavel: 'Equipe Beta',
     status: 'planejamento',
     prazo: '2027-08-15',
@@ -26,7 +27,7 @@ export const dadosExemplo = [
   {
     id: 3,
     nome: 'Corredor Ecológico Mata Exemplo',
-    municipio: 'Campo Largo do Sul (fictício)',
+    municipio: 'Sinop - MT',
     responsavel: 'Equipe Gama',
     status: 'atrasado',
     prazo: '2026-06-30',
@@ -36,7 +37,7 @@ export const dadosExemplo = [
   {
     id: 4,
     nome: 'Coleta Seletiva nas Escolas Modelo',
-    municipio: 'Vale Verde (fictício)',
+    municipio: 'Cuiabá - MT',
     responsavel: 'Equipe Delta',
     status: 'concluido',
     prazo: '2026-02-28',
@@ -46,7 +47,7 @@ export const dadosExemplo = [
   {
     id: 5,
     nome: 'Reflorestamento da Margem do Rio Teste',
-    municipio: 'Porto Sereno (fictício)',
+    municipio: 'Cáceres - MT',
     responsavel: 'Equipe Épsilon',
     status: 'em_execucao',
     prazo: '2027-11-30',
@@ -56,7 +57,7 @@ export const dadosExemplo = [
   {
     id: 6,
     nome: 'Educação Ambiental Comunitária',
-    municipio: 'Serra Azul (fictício)',
+    municipio: 'Rondonópolis - MT',
     responsavel: 'Equipe Zeta',
     status: 'planejamento',
     prazo: '2027-05-20',
