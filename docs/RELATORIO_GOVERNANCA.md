@@ -1364,3 +1364,133 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `8613252`, com push para `origin/main` (`b52ccd7..8613252`). Logo depois, o assistente conferiu a Vercel: nova versão publicada, `leaflet.js` com SRI idêntico ao original, ícones como `image/png`. Num navegador real, com as APIs reais, Cuiabá foi localizada, 6 tiles carregaram, o clima foi exibido e não houve erros no console.
+
+---
+
+## Iteração 41 — 2026-10-16 — CI aprovada e orientação sobre a chave da OpenWeather
+
+### Prompt do humano
+
+> a CI passou e como eu revogo o chave no projeto Projeto_clima, eu preciso de fato regovar?
+
+### O que o assistente executou
+
+- Registrou a confirmação do humano: **a CI do commit `8613252` passou**.
+- Apenas orientação, sem nenhuma ação no Projeto_clima nem na conta da OpenWeather (o assistente não tem acesso a elas):
+  - **por que revogar:** a chave está pública no código e no histórico do Git; qualquer pessoa pode consumir a cota da conta ou causar bloqueio, e gerar cobrança se houver plano pago;
+  - **como revogar:** painel da OpenWeather → aba "API keys" → gerar uma nova chave e desativar ou excluir a antiga;
+  - **reescrever o histórico do Git é desnecessário** depois da revogação, pois a chave antiga deixa de funcionar; reescrever exigiria push forçado.
+  - Em site estático, qualquer chave no JavaScript fica pública. A correção definitiva é usar uma API sem chave (como foi feito aqui com o Open-Meteo) ou um intermediário no servidor.
+- Nenhuma alteração de código e nenhum commit; registro local.
+
+### Aprovações do humano
+
+- Confirmou que a CI passou.
+
+---
+
+## Iteração 42 — 2026-10-16 — Pergunta sobre o total de tokens usados
+
+### Prompt do humano
+
+> quantos tokens voce usou no total para realizar todo o projeto?
+
+### O que o assistente executou
+
+- Informou que **não tem acesso a um contador confiável** do total de tokens da sessão e que, por isso, não forneceria um número estimado. Indicou ao humano onde consultar o valor real (comandos `/cost` e `/usage` do Claude Code e o painel de uso da conta).
+- Nenhuma alteração de código e nenhum commit; registro local.
+
+### Aprovações do humano
+
+- Nenhuma aprovação necessária (somente informação).
+
+---
+
+## Iteração 43 — 2026-11-06 — Plano de evolução para a Fiscalização da SEMA/MT
+
+### Prompt do humano
+
+> Quero que você elabore um PLANO DE EVOLUÇÃO deste projeto para que ele possa ser implantado no setor de FISCALIZAÇÃO da SEMA/MT. Neste momento NÃO escreva nem altere código da aplicação: o entregável é somente documentação.
+>
+> ## Contexto
+> O projeto atual é um protótipo de "Governança de Projetos Ambientais" (Node puro, front-end estático, localStorage, testes node:test + Playwright, CI no GitHub Actions). A meta é transformá-lo em um sistema real de fiscalização ambiental. Os fiscais usarão celular OFFLINE em campo, salvando dados localmente, e só sincronizarão quando chegarem à SEMA (Wi-Fi/rede interna).
+>
+> ## Passo 1: análise do código existente (antes de planejar)
+> Leia o repositório (package.json, src/, public/js/, test/, e2e/, .github/workflows/ci.yml, playwright.config.js, README.md, docs/). Resuma em uma seção "Diagnóstico do estado atual":
+> - o que já existe e deve ser preservado (ex.: isolamento da persistência em repositorio.js, funções puras, testes, CI, regra de "sem diálogos nativos");
+> - o que precisa mudar (ex.: localStorage, ausência de login, domínio "projeto" vs. "fiscalização", mapa/clima online, "nenhuma dependência em produção");
+> - dívidas técnicas ou riscos que você encontrar no código real, citando arquivos.
+>
+> ## Passo 2: o plano
+> Gere o arquivo `docs/PLANO_EVOLUCAO_SEMA.md`, em português do Brasil, com as seções abaixo. Em cada item, indique prioridade (MVP / Fase 2 / Futuro), esforço estimado (P/M/G) e dependências.
+>
+> 1. Visão e objetivos, com indicadores de sucesso mensuráveis.
+> 2. Arquitetura-alvo offline-first: PWA vs. Capacitor (com prós e contras), IndexedDB/SQLite, API Node, PostgreSQL + PostGIS, armazenamento de evidências, painel de gabinete. Inclua um diagrama em Mermaid.
+> 3. Módulos funcionais do domínio de fiscalização: ocorrências/denúncias, ordem de fiscalização e roteiro, vistoria em campo (formulários dinâmicos, fotos/vídeo/áudio com GPS), identificação do autuado (CPF/CNPJ, CAR), auto de infração, termos de embargo/apreensão/notificação/constatação, talonário digital com numeração sem colisão offline, coleta de ciência/assinatura, triagem e conferência pós-campo, prazos de defesa e recursos.
+> 4. Geoespacial: camadas offline (CAR, embargos, UCs, terras indígenas, APP, alertas de desmatamento), alerta de sobreposição em campo, SIRGAS 2000, mapa base offline respeitando as políticas de uso de tiles.
+> 5. Sincronização offline: UUIDs no dispositivo, outbox idempotente, política de conflitos por tipo de dado, envio em lotes com retomada, versionamento de esquema, tela de status, plano B de exportação de pacote assinado/criptografado.
+> 6. Segurança, LGPD e validade probatória: autenticação (gov.br/IdP do Estado), perfis, criptografia local, bloqueio/limpeza remota, cadeia de custódia (hash SHA-256, metadados, divergência de data/hora), trilha de auditoria imutável, soft delete, retenção, backups.
+> 7. Qualidade e operação: estratégia de testes (unidade, contrato da API, E2E do fluxo vistoria offline → sincronização → conferência, carga, aparelhos reais), ambientes (dev/homologação/produção), observabilidade, CI/CD ampliada (CodeQL, SBOM, scan de segredos), acessibilidade e usabilidade em campo.
+> 8. Governança: ADRs a escrever, revisão humana obrigatória em código sensível, política de uso de IA, separação entre dados fictícios e reais.
+> 9. Roadmap por fases (0. Descoberta, 1. Fundação, 2. Campo offline MVP, 3. Documentos e mapa, 4. Integrações e gestão, 5. Piloto e implantação), com entregáveis, critérios de aceite e riscos de cada fase. Proponha um piloto pequeno (uma equipe, um tipo de infração).
+> 10. Backlog inicial: 20 a 30 histórias de usuário priorizadas (formato "Como [perfil], quero [ação], para [benefício]"), com critérios de aceite resumidos.
+> 11. Riscos e decisões em aberto (jurídico, aparelhos da SEMA vs. pessoais, hospedagem, integrações com sistemas existentes, capacitação, escopo), cada um com recomendação e responsável sugerido.
+> 12. Perguntas para a SEMA: lista objetiva do que precisa ser levantado na fase de descoberta (fluxo atual, modelos de auto/termos, sistemas em uso, infraestrutura, base legal).
+>
+> ## Regras
+> - Não invente fatos sobre a SEMA/MT, sistemas internos ou legislação. Quando algo precisar de confirmação, marque como "A VALIDAR" e liste na seção 12. Se citar leis ou normas, indique que a vigência e os campos obrigatórios devem ser conferidos com a Procuradoria.
+> - Baseie as recomendações técnicas no código real que você leu, não em suposições genéricas.
+> - Seja concreto: prefira decisões recomendadas com justificativa a listas de opções sem posição.
+> - Não instale dependências, não crie branches e não faça commits sem minha autorização.
+> - Se faltar informação para algum ponto, faça no máximo 5 perguntas objetivas no fim da resposta em vez de assumir.
+>
+> ## Entrega
+> Ao terminar, mostre um resumo de até 15 linhas com as principais decisões recomendadas e o próximo passo técnico sugerido.
+
+### O que o assistente executou
+
+- Modo de planejamento: leitura de todo o código versionado (`package.json`, `src/server.js`, `public/js/*.js`, `test/*.test.js`, lista de testes de `e2e/app.spec.js`, `playwright.config.js`, `.github/workflows/ci.yml`, `README.md`, `docs/`). Depois, apresentação de um plano resumido para aprovação.
+- Criação de `docs/PLANO_EVOLUCAO_SEMA.md` com:
+  - diagnóstico do estado atual, com 16 dívidas técnicas e riscos que citam arquivos (ex.: `repositorio.js` sobrescreve os dados com os exemplos quando o JSON está corrompido; `proximoId` colide entre aparelhos offline; exclusão física sem auditoria);
+  - as seções 1 a 12 pedidas, com prioridade, esforço e dependências em cada item;
+  - diagrama Mermaid, 28 histórias de usuário, 10 ADRs, 12 riscos e 27 perguntas para a SEMA.
+- Decisões recomendadas:
+  - Capacitor (Android) com SQLite + SQLCipher no app de campo e painel web;
+  - API Node/Fastify, PostgreSQL + PostGIS (SIRGAS 2000) e armazenamento de objetos compatível com S3;
+  - UUID v7 e talonário por blocos reservados por aparelho;
+  - outbox idempotente com política de conflitos por tipo de dado;
+  - mapa base PMTiles próprio, sem pré-carga de `tile.openstreetmap.org`;
+  - OIDC com o IdP do Estado (A VALIDAR);
+  - piloto com uma equipe e um tipo de infração.
+- Fatos sobre a SEMA, seus sistemas e a legislação estadual foram marcados como "A VALIDAR"; as leis federais citadas trazem o aviso de conferência com a Procuradoria.
+- Nenhum código da aplicação alterado, nenhum teste executado, nenhuma dependência instalada, nenhum branch ou commit criado.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `docs/PLANO_EVOLUCAO_SEMA.md` | Criado |
+| `docs/RELATORIO_GOVERNANCA.md` | Iteração 43 acrescentada |
+
+### Aprovações do humano
+
+- Aprovou o plano apresentado no modo de planejamento (criação do documento e registro neste relatório).
+- Commit **não autorizado** até o momento.
+
+---
+
+## Iteração 44 — 2026-11-06 — Commit e push do plano de evolução
+
+### Prompt do humano
+
+> sim, faça o commit e push
+
+### O que o assistente executou
+
+- Commit `docs: plano de evolução para a Fiscalização da SEMA/MT`, com push para `origin/main`. Inclui `docs/PLANO_EVOLUCAO_SEMA.md` e este relatório (iterações 41 a 44).
+- Somente documentação; nenhum código alterado.
+
+### Aprovações do humano
+
+- Autorizou o commit e o push.
