@@ -3,8 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Não há banco de dados nem API de dados: o servidor apenas entrega os
-// arquivos estáticos. Os projetos ficam no localStorage do navegador.
+// Entrega os arquivos estáticos (os projetos do protótipo ficam no localStorage do navegador).
+// Opcionalmente, atende a API de fiscalização em /api (sincronização, talonário, auditoria),
+// habilitada só quando um banco e credenciais são configurados (ver README).
 
 const PASTA_PUBLICA = resolve(fileURLToPath(new URL('../public', import.meta.url)));
 
@@ -37,13 +38,13 @@ const CABECALHOS_SEGURANCA = {
   'Referrer-Policy': 'strict-origin-when-cross-origin'
 };
 
-function enviar(res, status, corpo, tipo) {
-  res.writeHead(status, { ...CABECALHOS_SEGURANCA, 'Content-Type': tipo });
+function enviar(res, status, corpo, tipo, extras = {}) {
+  res.writeHead(status, { ...extras, ...CABECALHOS_SEGURANCA, 'Content-Type': tipo });
   res.end(corpo);
 }
 
-function enviarJson(res, status, dados) {
-  enviar(res, status, JSON.stringify(dados), TIPOS['.json']);
+function enviarJson(res, status, dados, extras = {}) {
+  enviar(res, status, JSON.stringify(dados), TIPOS['.json'], extras);
 }
 
 async function servirEstatico(res, caminho) {
@@ -63,13 +64,9 @@ async function servirEstatico(res, caminho) {
   }
 }
 
-export function criarServidor() {
+// api: função criada por criarApi (src/api/rotas.js). Sem ela, /api responde 404.
+export function criarServidor({ api } = {}) {
   return createServer(async (req, res) => {
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.setHeader('Allow', 'GET, HEAD');
-      return enviarJson(res, 405, { erro: 'Método não permitido' });
-    }
-
     let url;
     try {
       url = new URL(req.url, 'http://localhost');
@@ -77,6 +74,16 @@ export function criarServidor() {
       return enviarJson(res, 400, { erro: 'Requisição inválida' });
     }
     const { pathname } = url;
+
+    if (pathname === '/api' || pathname.startsWith('/api/')) {
+      if (!api) return enviarJson(res, 404, { erro: 'API não habilitada neste servidor' });
+      return api(req, res, url, enviarJson);
+    }
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.setHeader('Allow', 'GET, HEAD');
+      return enviarJson(res, 405, { erro: 'Método não permitido' });
+    }
 
     if (pathname === '/health') {
       return enviarJson(res, 200, { status: 'ok' });
@@ -94,7 +101,20 @@ export function criarServidor() {
 // não quando importado pelos testes.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const porta = Number(process.env.PORT) || 3000;
-  criarServidor().listen(porta, () => {
-    console.log(`Servidor em http://localhost:${porta}`);
+  const api = await apiDoAmbiente(process.env);
+  criarServidor({ api }).listen(porta, () => {
+    console.log(`Servidor em http://localhost:${porta}${api ? ' (API de fiscalização habilitada)' : ''}`);
   });
+}
+
+// A API só é habilitada com DB_PATH e API_CREDENCIAIS_ARQUIVO (JSON fora do repositório).
+// Credenciais por token são PROVISÓRIAS e recusadas em produção (ADR-008).
+export async function apiDoAmbiente(env) {
+  if (!env.DB_PATH || !env.API_CREDENCIAIS_ARQUIVO) return undefined;
+  if (env.NODE_ENV === 'production') {
+    throw new Error('Credenciais por token são só para desenvolvimento e homologação (ADR-008)');
+  }
+  const [{ abrirBanco }, { criarApi }] = await Promise.all([import('./api/banco.js'), import('./api/rotas.js')]);
+  const credenciais = JSON.parse(await readFile(env.API_CREDENCIAIS_ARQUIVO, 'utf8'));
+  return criarApi({ db: abrirBanco(env.DB_PATH), credenciais });
 }
