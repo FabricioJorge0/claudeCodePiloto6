@@ -75,9 +75,20 @@ describe('servidor', () => {
     assert.equal(res.status, 404);
   });
 
-  test('não existe API de dados (tudo fica no localStorage)', async () => {
-    const res = await requisitar('/api/projetos');
-    assert.equal(res.status, 404);
+  test('sem configuração, a API de fiscalização fica desabilitada (404 em qualquer método)', async () => {
+    for (const method of ['GET', 'POST']) {
+      const res = await requisitar('/api/sync/lote', { method });
+      assert.equal(res.status, 404, method);
+      assert.match(res.corpo, /API não habilitada/);
+    }
+  });
+
+  test('módulos do pacote de domínio são servidos ao navegador', async () => {
+    for (const arquivo of ['ids', 'documentos', 'integridade', 'relogio', 'estados', 'talonario', 'fiscalizacao', 'sincronizacao']) {
+      const res = await requisitar(`/js/dominio/${arquivo}.js`);
+      assert.equal(res.status, 200, arquivo);
+      assert.match(res.headers['content-type'], /^text\/javascript/, arquivo);
+    }
   });
 
   test('HEAD é permitido', async () => {

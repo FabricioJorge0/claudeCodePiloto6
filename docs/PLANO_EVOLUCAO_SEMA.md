@@ -3,6 +3,19 @@
 **Origem:** protótipo "Governança de Projetos Ambientais" (repositório `claudePiloto6`, commit `8613252`)
 **Data:** 2026-11-06
 **Situação:** proposta para discussão. Nenhum código foi alterado para produzir este documento.
+
+> **Andamento (2026-11-06):** a "fundação sem dependências" foi implementada na branch `feat/fiscalizacao-fundacao`. Ela inclui:
+>
+> - correção das dívidas D1 a D6, D8 e D9 no protótipo;
+> - pacote de domínio (`public/js/dominio/`);
+> - API de sincronização idempotente, talonário por blocos e auditoria encadeada (`src/api/`, com `node:sqlite` interino);
+> - ADRs 003, 004, 007 e 011 em `docs/adr/`.
+>
+> Ficaram fora desse recorte:
+>
+> - D7, D10 e D11, que dependem da troca do `localStorage` e da UI;
+> - D12 a D16;
+> - os itens que dependem da Fase 0 (app Capacitor, IdP, hospedagem, modelos oficiais).
 **Autoria:** elaborado com apoio do Claude Code (Claude Opus 5.5), sob responsabilidade de Fabricio Jorge.
 
 > **Avisos importantes**

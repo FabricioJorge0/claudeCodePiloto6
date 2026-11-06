@@ -1494,3 +1494,114 @@ A falha na CI mostrou o valor do ciclo de desenvolvimento seguro: um teste autom
 ### Aprovações do humano
 
 - Autorizou o commit e o push.
+- Registro posterior: o commit desta iteração é o `479717f`, com push para `origin/main` (`8613252..479717f`). O push dispara a CI; a conferência do resultado fica a cargo do humano.
+
+---
+
+## Iteração 45 — 2026-11-06 — Pedido de implementação do plano de evolução
+
+### Prompt do humano
+
+> implemente o plano de evolução presente no arquivo PLANO_EVOLUCAO_SEMA.md
+
+### O que o assistente executou
+
+- Verificou o ambiente: Node 24.19.0, Docker 29.7.2 e Java 21 disponíveis; PostgreSQL local e Android SDK ausentes.
+- Não iniciou a implementação. O plano completo cobre de 10 a 14 meses em 6 fases. A Fase 0 depende de respostas da SEMA e da Procuradoria (modelos de auto, numeração, IdP, hospedagem). Partes dele exigem instalar dependências (Fastify, Capacitor, SQLCipher, PostgreSQL/PostGIS), o que requer autorização.
+- Perguntou ao humano qual recorte implementar primeiro e onde trabalhar (branch ou `main`).
+
+### Aprovações do humano
+
+- Aguardando a escolha do escopo.
+
+---
+
+## Iteração 46 — 2026-11-06 — Implementação da fundação sem dependências
+
+### Decisões do humano (perguntadas pelo assistente na iteração 45)
+
+- **Escopo:** "Fundação sem deps (Recomendado)". Corrigir as dívidas do protótipo, criar o pacote de domínio e a API de sincronização em Node 24 puro (`node:sqlite`), só com dados fictícios e sem instalar nada.
+- **Local:** "Branch nova (Recomendado)". Criar a branch `feat/fiscalizacao-fundacao`.
+
+### O que o assistente executou
+
+- Criou a branch `feat/fiscalizacao-fundacao` (autorizado).
+- **Pacote de domínio** `public/js/dominio/` (funções puras, navegador e Node):
+  - `ids.js`: UUID v7;
+  - `documentos.js`: CPF, CNPJ numérico e alfanumérico (conferido com o exemplo público da Receita, `12.ABC.345/01DE-35`) e formato do CAR (A VALIDAR);
+  - `integridade.js`: SHA-256, serialização canônica e cadeia de hashes;
+  - `relogio.js`: desvio de data/hora;
+  - `estados.js`: máquina de estados da vistoria com perfis;
+  - `talonario.js`: blocos de numeração;
+  - `fiscalizacao.js`: validação de vistoria, evidência, pessoa e documento, com campos genéricos (A VALIDAR);
+  - `sincronizacao.js`: contrato da outbox, lotes e política por entidade.
+- **API** `src/api/` com `node:sqlite` (banco interino, ADR-011):
+  - `banco.js`: migrações numeradas, gatilhos que tornam a auditoria somente inclusão e proíbem `DELETE` físico, auditoria encadeada por SHA-256;
+  - `sincronizacao.js`: lote idempotente por `opId`, uma transação por operação, resultados `aceita`/`rejeitada`/`conflito`/`adiada`, `versaoBase`, dono do rascunho, documento imutável com cancelamento, desvio de relógio marcado, alterações por cursor com filtro por perfil;
+  - `talonario.js`: reserva de blocos sem sobreposição e inutilização de blocos de aparelho baixado;
+  - `rotas.js`: token Bearer provisório com comparação em tempo constante, perfis, `X-Dispositivo-Id`, limite de 1 MB, só JSON, `no-store`, erro 500 sem detalhes.
+- `src/server.js`: `/api` atendido só quando `DB_PATH` e `API_CREDENCIAIS_ARQUIVO` estão definidos. A API é recusada com `NODE_ENV=production`. Sem configuração, o comportamento estático não muda (deploy na Vercel inalterado).
+- **Protótipo (esquema v2 do `localStorage`):**
+  - D1: dados ilegíveis guardados em cópia, nunca substituídos pelos exemplos; a função `restaurar` foi removida;
+  - D2: quarentena com motivo;
+  - D3: `uuid` em cada projeto;
+  - D4: exclusão lógica, sem reaproveitar códigos;
+  - D5/D6: metadados e histórico;
+  - D8: migração v1 → v2 que preserva o v1;
+  - D9: aviso na tela quando o navegador não salva ou quando há quarentena;
+  - o detalhe do projeto mostra a "Última alteração".
+- **Testes:**
+  - `test/dominio.test.js` (32), `test/api.test.js` (35) e `test/regras-estaticas.test.js` (4);
+  - `test/repositorio.test.js` reescrito (35);
+  - `test/server.test.js` ajustado;
+  - E2E com 3 testes novos (quarentena, dados corrompidos, migração v1) e 3 ajustados.
+- **Documentação:**
+  - ADRs em `docs/adr/` (índice, 003 sincronização, 004 numeração, 007 dependências, 011 SQLite interino);
+  - README;
+  - nota de andamento no plano.
+- **Configuração:** `package.json` com `engines` `>=22.13` (exigido pelo `node:sqlite`); `.gitignore` com `*.db` e `credenciais*.json`.
+- **Resultado:** `npm run test:all` com **199 testes de unidade e 56 E2E passando**.
+- Um teste manual com o servidor real (curl) foi **bloqueado** pelo classificador de permissões, porque o comando incluía o encerramento de processos `node`. Não foi repetido; o mesmo caminho HTTP está coberto pelos testes automatizados.
+- **Fora do recorte:**
+  - D7, D10 e D11;
+  - D12 a D16 (inclusive a CI ampliada);
+  - upload de mídia com retomada, plano B de exportação cifrada e o app Capacitor;
+  - os itens que dependem da Fase 0.
+
+### Arquivos criados/modificados
+
+| Arquivo | Ação |
+|---|---|
+| `public/js/dominio/*.js` (8 arquivos) | Criados |
+| `src/api/banco.js`, `sincronizacao.js`, `talonario.js`, `rotas.js` | Criados |
+| `test/dominio.test.js`, `test/api.test.js`, `test/regras-estaticas.test.js` | Criados |
+| `docs/adr/README.md`, `ADR-003`, `ADR-004`, `ADR-007`, `ADR-011` | Criados |
+| `public/js/repositorio.js`, `public/js/app.js`, `public/index.html`, `public/styles.css` | Modificados |
+| `src/server.js`, `test/repositorio.test.js`, `test/server.test.js`, `e2e/app.spec.js` | Modificados |
+| `README.md`, `docs/PLANO_EVOLUCAO_SEMA.md`, `package.json`, `.gitignore`, `docs/RELATORIO_GOVERNANCA.md` | Modificados |
+
+### Testes e dependências
+
+- 199 testes de unidade e 56 E2E passando localmente (Node 24.19.0).
+- **Nenhuma dependência instalada.**
+
+### Aprovações do humano
+
+- Escolheu o escopo e autorizou a criação da branch.
+- Commit, push e PR **não autorizados** até o momento.
+
+---
+
+## Iteração 47 — 2026-11-06 — Commit, push e PR da fundação
+
+### Prompt do humano
+
+> sim, faça o commit, push e abra o PR
+
+### O que o assistente executou
+
+- Commit na branch `feat/fiscalizacao-fundacao` com as alterações da iteração 46 e este relatório (iterações 45 a 47), push para `origin` e abertura de pull request para a `main` com `gh pr create`.
+
+### Aprovações do humano
+
+- Autorizou o commit, o push e a abertura do PR. O merge na `main` **não** foi autorizado.

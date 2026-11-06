@@ -20,6 +20,8 @@ Sistema web responsivo para acompanhar projetos ambientais (status, responsável
 | 3 | Testes Node + persistência em localStorage | Concluída |
 | 4 | Testes Playwright (desktop + celular) | Concluída |
 | 5 | CI com GitHub Actions | Concluída |
+| 6 | Plano de evolução para a Fiscalização da SEMA/MT ([`docs/PLANO_EVOLUCAO_SEMA.md`](docs/PLANO_EVOLUCAO_SEMA.md)) | Concluída |
+| 7 | Fundação sem dependências: correções D1–D9, pacote de domínio e API de sincronização | Em revisão (branch `feat/fiscalizacao-fundacao`) |
 
 ## Integração contínua
 
@@ -32,7 +34,17 @@ Segurança do workflow: permissão apenas de leitura (`contents: read`), checkou
 
 ## Arquitetura
 
-**Não há banco de dados.** Os projetos ficam no `localStorage` do navegador (chave `gpa:projetos:v1`). Na primeira visita, os dados fictícios de exemplo são carregados automaticamente. O servidor Node apenas entrega os arquivos estáticos.
+**O protótipo não usa banco de dados.** Os projetos ficam no `localStorage` do navegador (chave `gpa:projetos:v2`). Na primeira visita, os dados fictícios de exemplo são carregados automaticamente. O servidor Node entrega os arquivos estáticos e, **se configurada**, atende a API de fiscalização em `/api` (ver abaixo).
+
+**Proteção dos dados salvos (esquema v2):**
+
+- cada projeto tem um `uuid` (UUID v7), que não colide entre aparelhos; o número exibido (`#id`) é só um código local e nunca é reaproveitado;
+- cada projeto guarda `criadoEm`, `atualizadoEm`, `versao` e o histórico das alterações;
+- a exclusão é lógica: o projeto sai da lista, mas continua registrado com data e motivo;
+- dados ilegíveis **nunca** são substituídos pelos exemplos: o conteúdo é guardado em uma cópia (`gpa:projetos:v2:ilegivel:<data>`) e a tela avisa;
+- registros inválidos vão para a quarentena, com o motivo, em vez de sumirem;
+- os dados do esquema anterior (`gpa:projetos:v1`) são migrados automaticamente e o original é mantido;
+- se o navegador não permitir salvar, a tela avisa que os dados serão perdidos ao fechar a página.
 
 Funcionalidades:
 
@@ -44,6 +56,43 @@ Funcionalidades:
 - Os cartões da lista não têm botão de exclusão, e não existe mais o botão de restaurar os dados de exemplo. Os dados de exemplo são carregados só na primeira visita.
 
 **Paleta visual:** branco predominante e verde como cor de apoio (faixa do topo, bordas, barras de progresso, painel do formulário). O texto é sempre preto, ou branco sobre o verde. As exceções são os selos de status (cada um na sua cor), os botões **Excluir** (texto avermelhado) e **Salvar projeto** (texto verde). A regra é verificada por um teste E2E.
+
+## Fundação da fiscalização (pacote de domínio e API)
+
+Primeira etapa do [plano de evolução](docs/PLANO_EVOLUCAO_SEMA.md), feita **sem novas dependências** (Node 22.13+). Todos os dados de teste são fictícios.
+
+**Pacote de domínio** (`public/js/dominio/`): funções puras usadas pelo navegador e pela API.
+
+| Módulo | Conteúdo |
+|---|---|
+| `ids.js` | UUID v7 gerado no aparelho |
+| `documentos.js` | CPF, CNPJ (numérico e alfanumérico) e número do CAR (formato: A VALIDAR) |
+| `integridade.js` | SHA-256, serialização canônica e cadeia de hashes |
+| `relogio.js` | Divergência de data/hora entre aparelho e servidor |
+| `estados.js` | Máquina de estados da vistoria, com perfis |
+| `talonario.js` | Consumo de blocos de numeração |
+| `fiscalizacao.js` | Validação de vistoria, evidência, pessoa e documento (campos genéricos: A VALIDAR) |
+| `sincronizacao.js` | Contrato da outbox, lotes e política por entidade |
+
+**API** (`src/api/`, banco `node:sqlite` interino; ver [ADR-011](docs/adr/ADR-011-sqlite-interino.md)):
+
+| Rota | Perfil | O que faz |
+|---|---|---|
+| `POST /api/sync/lote` | fiscal | Recebe até 50 operações da outbox; idempotente por `opId` |
+| `GET /api/sync/alteracoes?desde=&limite=` | fiscal, conferente, gestor, auditor | Alterações por cursor |
+| `POST /api/talonario/blocos` | fiscal | Reserva um bloco de numeração para o aparelho |
+| `GET /api/talonario/blocos` | fiscal | Blocos do aparelho |
+| `POST /api/talonario/inutilizacoes` | administrador | Inutiliza os blocos de um aparelho baixado |
+| `GET /api/auditoria/verificacao` | auditor | Confere a cadeia de hashes da auditoria |
+
+Toda rota exige `Authorization: Bearer <token>`. As rotas do aparelho exigem também `X-Dispositivo-Id` (UUID). A API só é habilitada com as duas variáveis abaixo e é **recusada com `NODE_ENV=production`**, pois a autenticação por token é provisória até o OIDC do IdP do Estado (ADR-008).
+
+```bash
+# credenciais.json (fora do Git): { "<token com 16+ caracteres>": { "ator": "fiscal.teste", "perfil": "fiscal" } }
+DB_PATH=./fiscalizacao.db API_CREDENCIAIS_ARQUIVO=./credenciais.json npm start
+```
+
+Decisões: [`docs/adr/`](docs/adr/README.md) (sincronização, numeração, dependências, SQLite interino).
 
 Toda confirmação é feita em **modal próprio** (`<dialog>`), nunca com `alert`, `confirm` ou `prompt` do navegador. O foco inicial fica em "Cancelar", e Esc ou clique fora do modal cancelam a ação. Essa regra é garantida por testes: uma verificação estática do código em `test/sem-dialogos-nativos.test.js` e uma verificação no navegador em todos os testes E2E.
 
@@ -84,12 +133,17 @@ URLs de deploy protegidas pela Vercel (ex.: `...-<hash>-<time>.vercel.app`) exig
 
 ```
 src/
-  server.js              servidor HTTP estático (Node puro) + /health
+  server.js              servidor HTTP estático (Node puro) + /health + /api opcional
+  api/banco.js           node:sqlite: migrações, auditoria encadeada e imutável
+  api/sincronizacao.js   recebimento de lotes, idempotência, conflitos, alterações por cursor
+  api/talonario.js       reserva e inutilização de blocos de numeração
+  api/rotas.js           rotas, autenticação provisória, perfis e limites
 public/
   index.html, styles.css interface responsiva
   js/app.js              interface (DOM)
-  js/repositorio.js      persistência no localStorage
+  js/repositorio.js      persistência no localStorage (esquema v2, quarentena, exclusão lógica)
   js/projetos.js         regras de negócio e validação (funções puras)
+  js/dominio/            pacote de domínio da fiscalização (funções puras, navegador e Node)
   js/dados-exemplo.js    dados de exemplo (projetos fictícios, municípios reais)
   js/clima.js            localização e clima (Open-Meteo), com validação das respostas
   js/mapa.js             mapa do município (Leaflet)
@@ -97,7 +151,10 @@ public/
 test/
   projetos.test.js       regras de negócio e validação
   clima.test.js          clima e localização (fetch simulado, sem rede)
-  repositorio.test.js    localStorage (com armazenamento simulado)
+  repositorio.test.js    localStorage (com armazenamento simulado): D1–D9
+  dominio.test.js        pacote de domínio
+  api.test.js            API via HTTP: idempotência, conflitos, talonário, auditoria
+  regras-estaticas.test.js  sem injeção de HTML, domínio puro, sem console.log no servidor
   server.test.js         servidor e segurança
   sem-dialogos-nativos.test.js  proíbe alert/confirm/prompt no front-end
 e2e/
@@ -115,7 +172,9 @@ Status válidos: `planejamento`, `em_execucao`, `atrasado`, `concluido`.
 - O front-end usa `textContent` em vez de `innerHTML`, o que previne XSS
 - Os dados lidos do localStorage são validados, e registros corrompidos ou adulterados são descartados
 - Tratamento de localStorage indisponível (modo privado) e de cota excedida
-- Nenhuma dependência de execução em produção
+- Nenhuma dependência de execução em produção (política: [ADR-007](docs/adr/ADR-007-dependencias.md))
+- API: autenticação obrigatória, perfis, `X-Dispositivo-Id`, corpo limitado a 1 MB, apenas JSON, `Cache-Control: no-store`, erro 500 sem detalhes internos
+- Auditoria somente inclusão (gatilhos no banco) e encadeada por SHA-256 (adulteração detectável)
 - Serviços externos sem chave de API (nenhum segredo no código). A CSP do servidor libera só o necessário: imagens de `tile.openstreetmap.org` e chamadas a `api.open-meteo.com` e `geocoding-api.open-meteo.com`. Scripts e estilos vêm apenas do próprio site.
 - O popup do mapa recebe o texto como elemento (`textContent`), pois o Leaflet interpretaria strings como HTML
 - Respostas das APIs são validadas (números, tipos) antes de exibir; consultas antigas são descartadas ao trocar de projeto

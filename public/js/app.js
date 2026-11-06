@@ -1,25 +1,23 @@
 // Interface (DOM). Usa textContent (nunca innerHTML com dados) para evitar XSS.
 
 import { ROTULOS_STATUS, STATUS_VALIDOS, filtrarProjetos, opcoesDeFiltro, resumoPorStatus } from './projetos.js';
-import { ErroValidacao, criarRepositorio } from './repositorio.js';
+import { ErroArmazenamento, ErroValidacao, criarRepositorio } from './repositorio.js';
 import { buscarClima, buscarLocalizacao } from './clima.js';
 import { destruirMapa, mostrarMapa } from './mapa.js';
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const data = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' });
+const dataHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 const decimal = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
+// Sem localStorage, o repositório guarda os dados só em memória e a tela AVISA
+// que eles serão perdidos ao fechar a página (antes isso acontecia em silêncio).
 function armazenamentoDisponivel() {
   try {
     return window.localStorage;
   } catch {
-    // Sem localStorage: mantém os dados apenas em memória nesta aba
-    const memoria = new Map();
-    return {
-      getItem: (k) => (memoria.has(k) ? memoria.get(k) : null),
-      setItem: (k, v) => memoria.set(k, String(v)),
-      removeItem: (k) => memoria.delete(k)
-    };
+    const indisponivel = () => { throw new Error('localStorage indisponível'); };
+    return { getItem: indisponivel, setItem: indisponivel, removeItem: indisponivel };
   }
 }
 
@@ -139,7 +137,8 @@ function renderizarDetalhes(p) {
     ['Prazo', formatarPrazo(p.prazo)],
     ['Orçamento', moeda.format(p.orcamento)],
     ['Progresso', `${progresso}%`],
-    ['Código', `#${p.id}`]
+    ['Código', `#${p.id}`],
+    ['Última alteração', dataHora.format(new Date(p.atualizadoEm))]
   ]));
   document.getElementById('detalhes-status').value = p.status;
 }
@@ -270,7 +269,7 @@ function configurarDetalhes() {
     if (!projeto) return;
     const confirmado = await confirmar({
       titulo: 'Excluir projeto',
-      mensagem: `Excluir o projeto "${projeto.nome}"? Esta ação não pode ser desfeita.`,
+      mensagem: `Excluir o projeto "${projeto.nome}"? Ele sai da lista, mas a exclusão fica registrada no histórico.`,
       textoConfirmar: 'Excluir',
       excluir: true
     });
@@ -343,16 +342,32 @@ function preencherOpcoes(id, valores, rotuloTodos) {
   seletor.value = valores.includes(atual) ? atual : '';
 }
 
+// Avisos sobre a situação dos dados salvos neste navegador
+function renderizarAvisoDados() {
+  const aviso = document.getElementById('aviso-dados');
+  const textos = [];
+  if (!repositorio.persistente()) {
+    textos.push('Atenção: este navegador não permite salvar dados. O que for cadastrado será perdido ao fechar a página.');
+  }
+  const problemas = repositorio.quarentena().length;
+  if (problemas > 0) {
+    textos.push(`${problemas} registro(s) com problema foram separados e não aparecem na lista. Nada foi apagado.`);
+  }
+  aviso.textContent = textos.join(' ');
+  aviso.hidden = textos.length === 0;
+}
+
 function atualizar() {
   const mensagem = document.getElementById('mensagem');
   const lista = document.getElementById('lista-projetos');
   let todos;
   try {
     todos = repositorio.listar();
+    renderizarAvisoDados();
   } catch (erro) {
     lista.replaceChildren();
-    mensagem.textContent = 'Não foi possível carregar os projetos.';
-    console.error(erro);
+    mensagem.textContent = erro instanceof ErroArmazenamento ? erro.message : 'Não foi possível carregar os projetos.';
+    if (!(erro instanceof ErroArmazenamento)) console.error(erro);
     return;
   }
 

@@ -166,8 +166,10 @@ test('cadastra projeto e mantém após recarregar (localStorage)', async ({ page
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO + 1);
   await expect(page.getByTestId('lista-projetos')).toContainText(projetoNovo.nome);
 
-  const salvo = await page.evaluate(() => JSON.parse(localStorage.getItem('gpa:projetos:v1')));
-  expect(salvo.at(-1)).toMatchObject({ nome: projetoNovo.nome, orcamento: 12000, progresso: 20 });
+  const salvo = await page.evaluate(() => JSON.parse(localStorage.getItem('gpa:projetos:v2')));
+  expect(salvo.versaoEsquema).toBe(2);
+  expect(salvo.projetos.at(-1)).toMatchObject({ id: 7, nome: projetoNovo.nome, orcamento: 12000, progresso: 20, versao: 1 });
+  expect(salvo.projetos.at(-1).uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
 
 test('mostra erros de validação e não salva projeto inválido', async ({ page }) => {
@@ -210,7 +212,7 @@ test('clicar no cartão abre o modal com os detalhes completos', async ({ page }
   await expect(detalhes).toBeVisible();
   await expect(detalhes.getByRole('heading', { name: 'Corredor Ecológico Mata Exemplo' })).toBeVisible();
   const campos = detalhes.getByTestId('detalhes-campos');
-  for (const texto of ['Sinop - MT', 'Equipe Gama', 'Atrasado', '30/06/2026', 'R$ 320.000,00', '60%', '#3']) {
+  for (const texto of ['Sinop - MT', 'Equipe Gama', 'Atrasado', '30/06/2026', 'R$ 320.000,00', '60%', '#3', 'Última alteração']) {
     await expect(campos).toContainText(texto);
   }
   await expect(detalhes.getByTestId('detalhes-status')).toHaveValue('atrasado');
@@ -267,6 +269,12 @@ test('exclui projeto pelo modal de detalhes, com confirmação', async ({ page }
 
   await page.reload();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO - 1);
+
+  // Exclusão lógica: o registro continua salvo, com data e motivo
+  const excluido = await page.evaluate(() => JSON.parse(localStorage.getItem('gpa:projetos:v2'))
+    .projetos.find((p) => p.nome === 'Coleta Seletiva nas Escolas Modelo'));
+  expect(excluido.excluidoEm).toBeTruthy();
+  expect(excluido.historico.at(-1).acao).toBe('excluido');
 });
 
 test('cancelar a exclusão mantém o projeto e o modal de detalhes aberto', async ({ page }) => {
@@ -523,15 +531,47 @@ test('paleta: fundo branco, verde de apoio e texto preto/branco com exceções',
   await modalConfirmacao(page).getByRole('button', { name: 'Cancelar' }).click();
 });
 
-test('descarta dados adulterados no localStorage', async ({ page }) => {
+test('dados adulterados no localStorage vão para a quarentena, com aviso', async ({ page }) => {
+  await expect(page.getByTestId('aviso-dados')).toBeHidden();
   await page.evaluate(() => {
-    const dados = JSON.parse(localStorage.getItem('gpa:projetos:v1'));
-    dados[0].status = 'invalido';
-    dados[1].progresso = 999;
-    localStorage.setItem('gpa:projetos:v1', JSON.stringify(dados));
+    const dados = JSON.parse(localStorage.getItem('gpa:projetos:v2'));
+    dados.projetos[0].status = 'invalido';
+    dados.projetos[1].progresso = 999;
+    localStorage.setItem('gpa:projetos:v2', JSON.stringify(dados));
   });
   await page.reload();
   await expect(page.getByTestId('projeto')).toHaveCount(TOTAL_EXEMPLO - 2);
+  await expect(page.getByTestId('aviso-dados')).toContainText('2 registro(s) com problema foram separados');
+
+  const quarentena = await page.evaluate(() => JSON.parse(localStorage.getItem('gpa:projetos:v2')).quarentena);
+  expect(quarentena).toHaveLength(2);
+});
+
+test('dados corrompidos não são trocados pelos exemplos: ficam guardados em cópia', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('gpa:projetos:v2', '{corrompido'));
+  await page.reload();
+  await expect(page.getByTestId('projeto')).toHaveCount(0);
+  await expect(page.getByTestId('aviso-dados')).toContainText('Nada foi apagado');
+
+  const copia = await page.evaluate(() => {
+    const chave = Object.keys(localStorage).find((k) => k.startsWith('gpa:projetos:v2:ilegivel:'));
+    return chave && localStorage.getItem(chave);
+  });
+  expect(copia).toBe('{corrompido');
+});
+
+test('migra os dados do esquema v1 sem perder projetos', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.removeItem('gpa:projetos:v2');
+    localStorage.setItem('gpa:projetos:v1', JSON.stringify([{
+      id: 9, nome: 'Projeto Antigo Fictício', municipio: 'Vale Verde (fictício)', responsavel: 'Equipe Antiga',
+      status: 'planejamento', prazo: '2027-01-31', orcamento: 1000, progresso: 10
+    }]));
+  });
+  await page.reload();
+  await expect(page.getByTestId('projeto')).toHaveCount(1);
+  await expect(cartao(page, 'Projeto Antigo Fictício')).toContainText('Cuiabá - MT');
+  await expect(page.getByTestId('aviso-dados')).toBeHidden();
 });
 
 test('layout responsivo sem rolagem horizontal', async ({ page }, testInfo) => {

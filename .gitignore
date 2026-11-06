@@ -13,6 +13,12 @@ evidencias-*.zip
 # Material de entrega da atividade (relatório, prints, evidências), mantido fora do repositório
 entrega/
 
+# Banco local da API (node:sqlite) e credenciais de desenvolvimento
+*.db
+*.db-wal
+*.db-shm
+credenciais*.json
+
 # Variáveis de ambiente e segredos
 .env
 .env.*
